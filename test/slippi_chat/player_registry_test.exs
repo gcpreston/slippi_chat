@@ -1,8 +1,6 @@
 defmodule SlippiChat.PlayerRegistryTest do
   use ExUnit.Case, async: true
 
-  alias SlippiChat.PlayerRegistry
-
   setup do
     pid = start_supervised!({PlayerRegistry, name: TestPlayerRegistry})
     %{pid: pid}

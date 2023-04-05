@@ -12,14 +12,17 @@ defmodule SlippiChat.PlayerRegistry do
     GenServer.start_link(__MODULE__, [], name: server_name)
   end
 
+  def add(player_code), do: add(__MODULE__, player_code)
   def add(server, player_code) do
     GenServer.call(server, {:add, player_code})
   end
 
+  def remove(player_code), do: remove(__MODULE__, player_code)
   def remove(server, player_code) do
     GenServer.call(server, {:remove, player_code})
   end
 
+  def list(), do: list(__MODULE__)
   def list(server) do
     GenServer.call(server, :list)
   end
