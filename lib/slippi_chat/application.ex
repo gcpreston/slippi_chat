@@ -17,9 +17,10 @@ defmodule SlippiChat.Application do
       # Start Finch
       {Finch, name: SlippiChat.Finch},
       # Start the Endpoint (http/https)
-      SlippiChatWeb.Endpoint
+      SlippiChatWeb.Endpoint,
       # Start a worker by calling: SlippiChat.Worker.start_link(arg)
       # {SlippiChat.Worker, arg}
+      SlippiChat.PlayerRegistry
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
