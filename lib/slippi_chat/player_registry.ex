@@ -32,6 +32,10 @@ defmodule SlippiChat.PlayerRegistry do
     GenServer.start_link(__MODULE__, [], name: server_name)
   end
 
+  def debug(server) do
+    GenServer.call(server, :debug)
+  end
+
   def register(server, player_code) do
     GenServer.call(server, {:register, player_code})
   end
@@ -115,6 +119,10 @@ defmodule SlippiChat.PlayerRegistry do
   # -----
 
   # TODO: For development
+  def handle_call(:debug, _from, state) do
+    {:reply, state, state}
+  end
+
   def handle_call(req, _from, state) do
     IO.inspect(req, label: "got unhandled request")
     IO.inspect(state, label: "State")

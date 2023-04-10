@@ -18,6 +18,8 @@ defmodule SlippiChatWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    live "/debug", PlayerRegistryLive.Index, :index
   end
 
   # Other scopes may use custom stacks.
