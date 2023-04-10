@@ -1,8 +1,28 @@
 defmodule SlippiChat.PlayerRegistry do
-  alias SlippiChat.PlayerRegistry
   use GenServer
 
-  defstruct player_codes: MapSet.new()
+  require Logger
+
+  @type player_code :: String.t()
+
+  # A player code is a code representing a unique player, in the format CODE#123
+  #
+  # A %PlayerRegistry{} is a struct with the following fields:
+  # - player_codes: a MapSet of player codes representing clients currently online
+  # - player_data: a Map of each client's player code to its Metadata
+  #
+  # A %Metadata{} is a struct with the following fields:
+  # - current_game: a list of the player codes of the client's current game
+
+  defmodule Metadata do
+    defstruct current_game: nil
+
+    def set_current_game(metadata, game) do
+      %{metadata | current_game: game}
+    end
+  end
+
+  defstruct player_codes: MapSet.new(), player_data: %{}
 
   ## API
   # TODO: notify_subscribers
@@ -12,19 +32,22 @@ defmodule SlippiChat.PlayerRegistry do
     GenServer.start_link(__MODULE__, [], name: server_name)
   end
 
-  def add(player_code), do: add(__MODULE__, player_code)
-  def add(server, player_code) do
-    GenServer.call(server, {:add, player_code})
+  def register(server, player_code) do
+    GenServer.call(server, {:register, player_code})
   end
 
-  def remove(player_code), do: remove(__MODULE__, player_code)
   def remove(server, player_code) do
     GenServer.call(server, {:remove, player_code})
   end
 
-  def list(), do: list(__MODULE__)
-  def list(server) do
-    GenServer.call(server, :list)
+  @spec game_started(GenServer.name(), player_code(), list(player_code())) :: :ok
+  def game_started(server, client_code, player_codes) do
+    GenServer.call(server, {:game_started, client_code, player_codes})
+  end
+
+  @spec game_ended(GenServer.name(), player_code()) :: :ok
+  def game_ended(server, client_code) do
+    GenServer.call(server, {:game_ended, client_code})
   end
 
   ## Callbacks
@@ -35,15 +58,67 @@ defmodule SlippiChat.PlayerRegistry do
   end
 
   @impl true
-  def handle_call({:add, code}, _from, %{player_codes: player_codes} = state) do
-    {:reply, :ok, %{state | player_codes: MapSet.put(player_codes, code)}}
+  def handle_call(
+        {:register, code},
+        _from,
+        %{player_codes: player_codes, player_data: data} = state
+      ) do
+    new_state = %{
+      state
+      | player_codes: MapSet.put(player_codes, code),
+        player_data: Map.put(data, code, %Metadata{})
+    }
+
+    Logger.debug("Registered #{code}")
+
+    {:reply, :ok, new_state}
   end
 
-  def handle_call({:remove, code}, _from, %{player_codes: player_codes} = state) do
-    {:reply, :ok, %{state | player_codes: MapSet.delete(player_codes, code)}}
+  def handle_call(
+        {:remove, code},
+        _from,
+        %{player_codes: player_codes, player_data: player_data} = state
+      ) do
+    new_state = %{
+      state
+      | player_codes: MapSet.delete(player_codes, code),
+        player_data: Map.delete(player_data, code)
+    }
+
+    Logger.debug("Removed #{code}")
+
+    {:reply, :ok, new_state}
   end
 
-  def handle_call(:list, _from, state) do
-    {:reply, state.player_codes, state}
+  def handle_call(
+        {:game_started, client_code, player_codes},
+        _from,
+        %{player_data: player_data} = state
+      ) do
+    new_metadata = Metadata.set_current_game(player_data[client_code], player_codes)
+    new_player_data = Map.replace(player_data, client_code, new_metadata)
+    new_state = %{state | player_data: new_player_data}
+    Logger.debug("Game started for client #{client_code}: #{inspect(player_codes)}")
+
+    {:reply, :ok, new_state}
+  end
+
+  def handle_call({:game_ended, client_code}, _from, %{player_data: player_data} = state) do
+    new_metadata = Metadata.set_current_game(player_data[client_code], nil)
+    new_player_data = Map.replace(player_data, client_code, new_metadata)
+    new_state = %{state | player_data: new_player_data}
+    Logger.debug("Game ended for client #{client_code}")
+
+    {:reply, :ok, new_state}
+  end
+
+  # -----
+
+  # TODO: For development
+  def handle_call(req, _from, state) do
+    IO.inspect(req, label: "got unhandled request")
+    IO.inspect(state, label: "State")
+
+    {:reply, :ok, state}
   end
 end
