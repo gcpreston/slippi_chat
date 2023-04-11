@@ -36,6 +36,10 @@ defmodule SlippiChat.PlayerRegistry do
     GenServer.call(server, :debug)
   end
 
+  def crash(server) do
+    GenServer.call(server, :crash)
+  end
+
   def register(server, player_code) do
     GenServer.call(server, {:register, player_code})
   end
@@ -121,6 +125,11 @@ defmodule SlippiChat.PlayerRegistry do
   # TODO: For development
   def handle_call(:debug, _from, state) do
     {:reply, state, state}
+  end
+
+  def handle_call(:crash, _from, state) do
+    1 / 0
+    {:reply, :ok, state}
   end
 
   def handle_call(req, _from, state) do

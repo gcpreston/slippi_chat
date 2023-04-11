@@ -24,8 +24,7 @@ defmodule SlippiChatWeb.PlayerRegistryLive do
   end
 
   def handle_event("crash-registry", _value, socket) do
-    # PlayerRegistry.crash(PlayerRegistry)
-    1 / 0
+    PlayerRegistry.crash(PlayerRegistry)
     {:noreply, socket}
   end
 
