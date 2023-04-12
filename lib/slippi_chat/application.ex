@@ -20,7 +20,8 @@ defmodule SlippiChat.Application do
       SlippiChatWeb.Endpoint,
       # Start a worker by calling: SlippiChat.Worker.start_link(arg)
       # {SlippiChat.Worker, arg}
-      SlippiChat.PlayerRegistry
+      SlippiChat.PlayerRegistry,
+      SlippiChat.ChatSessionManager
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

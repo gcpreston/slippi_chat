@@ -30,6 +30,11 @@ defmodule SlippiChat.ChatSessionManager do
     GenServer.call(server, {:session_end, game})
   end
 
+  @spec list(GenServer.name()) :: [game()]
+  def list(server) do
+    GenServer.call(server, :list)
+  end
+
   ## Callbacks
 
   @impl true
@@ -45,10 +50,16 @@ defmodule SlippiChat.ChatSessionManager do
     {:reply, :ok, %{state | sessions: new_sessions}}
   end
 
-  @impl true
   def handle_call({:session_end, game}, _from, state) do
     new_sessions = Map.drop(state.sessions, game)
 
     {:reply, :ok, %{state | sessions: new_sessions}}
+  end
+
+  def handle_call(:list, _from, state) do
+    {:reply,
+     state.sessions
+     |> Map.values()
+     |> Enum.uniq(), state}
   end
 end

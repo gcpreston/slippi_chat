@@ -20,6 +20,7 @@ defmodule SlippiChatWeb.Router do
     get "/", PageController, :home
 
     live "/debug", PlayerRegistryLive, :index
+    live "/chat_sessions", ChatSessionsLive, :index
   end
 
   # Other scopes may use custom stacks.
