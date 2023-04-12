@@ -1,20 +1,34 @@
 defmodule SlippiChat.PlayerRegistry do
+  @moduledoc """
+  A GenServer to keep track of connected clients and their game states.
+  """
   use GenServer
+
+  alias SlippiChat.ChatSessionManager
 
   require Logger
 
   @type player_code :: String.t()
+  @type game :: list(player_code())
 
   # A player code is a code representing a unique player, in the format CODE#123
   #
   # A %PlayerRegistry{} is a struct with the following fields:
   # - player_codes: a MapSet of player codes representing clients currently online
-  # - player_data: a Map of each client's player code to its Metadata
+  # - player_data: a Map of each client's player code to its PlayerMetadata
+  # - sessions: a Map of client player code to their active session,
+  #     where at least 2 clients are active
   #
-  # A %Metadata{} is a struct with the following fields:
-  # - current_game: a list of the player codes of the client's current game
+  # A %PlayerMetadata{} is a struct with the following fields:
+  # - current_game: the Game currently in progress for a client
+  #
+  # A Game is an alpha-numerically sorted list of player codes
+  # > A Game represents players in a Slippi game
+  #
 
-  defmodule Metadata do
+  defmodule PlayerMetadata do
+    @type t :: %__MODULE__{current_game: SlippiChat.PlayerRegistry.game()}
+
     defstruct current_game: nil
 
     def set_current_game(metadata, game) do
@@ -22,7 +36,17 @@ defmodule SlippiChat.PlayerRegistry do
     end
   end
 
-  defstruct player_codes: MapSet.new(), player_data: %{}
+  @type t :: %__MODULE__{
+    player_codes: MapSet.t(player_code()),
+    player_data: %{player_code() => PlayerMetadata.t()},
+    sessions: %{player_code() => game()}
+  }
+
+  defstruct player_codes: MapSet.new(), player_data: %{}, sessions: %{}
+
+  # defp get_player_metadata(%__MODULE__{} = state, player_code) do
+  #   Map.get()
+  # end
 
   ## API
   # TODO: notify_subscribers
@@ -50,6 +74,7 @@ defmodule SlippiChat.PlayerRegistry do
 
   @spec game_started(GenServer.name(), player_code(), list(player_code())) :: :ok
   def game_started(server, client_code, player_codes) do
+    player_codes = Enum.sort(player_codes)
     GenServer.call(server, {:game_started, client_code, player_codes})
   end
 
@@ -74,7 +99,7 @@ defmodule SlippiChat.PlayerRegistry do
     new_state = %{
       state
       | player_codes: MapSet.put(player_codes, code),
-        player_data: Map.put(data, code, %Metadata{})
+        player_data: Map.put(data, code, %PlayerMetadata{})
     }
 
     Logger.debug("Registered #{code}")
@@ -85,12 +110,23 @@ defmodule SlippiChat.PlayerRegistry do
   def handle_call(
         {:remove, code},
         _from,
-        %{player_codes: player_codes, player_data: player_data} = state
+        %{player_codes: player_codes, player_data: player_data, sessions: sessions} = state
       ) do
+    # current_game = get_in(player_data, [code, :current_game])
+    # Hmm but it's not current game it's whatever that player's session is...
+    current_game = sessions[code]
+    new_sessions =
+      if current_game do
+        remove_session(sessions, current_game)
+      else
+        sessions
+      end
+
     new_state = %{
       state
       | player_codes: MapSet.delete(player_codes, code),
-        player_data: Map.delete(player_data, code)
+        player_data: Map.delete(player_data, code),
+        sessions: new_sessions
     }
 
     Logger.debug("Removed #{code}")
@@ -99,25 +135,64 @@ defmodule SlippiChat.PlayerRegistry do
   end
 
   def handle_call(
-        {:game_started, client_code, player_codes},
+        {:game_started, client_code, game},
         _from,
-        %{player_data: player_data} = state
+        %{player_data: player_data, sessions: sessions} = state
       ) do
-    new_metadata = Metadata.set_current_game(player_data[client_code], player_codes)
+    new_metadata = PlayerMetadata.set_current_game(player_data[client_code], game)
     new_player_data = Map.replace(player_data, client_code, new_metadata)
-    new_state = %{state | player_data: new_player_data}
-    Logger.debug("Game started for client #{client_code}: #{inspect(player_codes)}")
+    Logger.debug("Game started for client #{client_code}: #{inspect(game)}")
 
+    # There is a session if any code in player_codes other than client_code
+    # is registered with the same Game
+
+    # TODO: Make helpers
+    # TODO: Handle not everyone being on the same page
+    should_add_session =
+      game
+      |> Enum.filter(fn code -> code != client_code end)
+      |> Enum.all?(fn code -> get_in(player_data, [code, :current_game]) == game end)
+
+    should_remove_session =
+      game
+      |> Enum.filter(fn code -> code != client_code end)
+      |> Enum.all?(fn code -> get_in(player_data, [code, :current_game]) != game end)
+
+    new_sessions =
+      cond do
+        should_add_session ->
+          add_session(sessions, game)
+          ChatSessionManager.session_start(ChatSessionManager, game)
+
+        should_remove_session ->
+          remove_session(sessions, game)
+          ChatSessionManager.session_end(ChatSessionManager, game)
+
+        true -> sessions
+      end
+
+    new_state = %{state | player_data: new_player_data, sessions: new_sessions}
     {:reply, :ok, new_state}
   end
 
   def handle_call({:game_ended, client_code}, _from, %{player_data: player_data} = state) do
-    new_metadata = Metadata.set_current_game(player_data[client_code], nil)
+    new_metadata = PlayerMetadata.set_current_game(player_data[client_code], nil)
     new_player_data = Map.replace(player_data, client_code, new_metadata)
     new_state = %{state | player_data: new_player_data}
     Logger.debug("Game ended for client #{client_code}")
 
     {:reply, :ok, new_state}
+  end
+
+  defp add_session(sessions, game) do
+    Logger.debug("Session started for game: #{inspect(game)}")
+    additions = Enum.reduce(game, %{}, fn player_code, acc -> Map.put(acc, player_code, game) end)
+    Map.merge(sessions, additions)
+  end
+
+  defp remove_session(sessions, game) do
+    Logger.debug("Session removed for game: #{inspect(game)}")
+    Map.drop(sessions, game)
   end
 
   # -----
