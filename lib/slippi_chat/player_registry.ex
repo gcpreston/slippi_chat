@@ -44,9 +44,9 @@ defmodule SlippiChat.PlayerRegistry do
 
   defstruct player_codes: MapSet.new(), player_data: %{}, sessions: %{}
 
-  # defp get_player_metadata(%__MODULE__{} = state, player_code) do
-  #   Map.get()
-  # end
+  defp get_player_metadata(%__MODULE__{} = state, player_code) do
+    Map.get(state.player_data, player_code)
+  end
 
   ## API
   # TODO: notify_subscribers
@@ -112,11 +112,10 @@ defmodule SlippiChat.PlayerRegistry do
         _from,
         %{player_codes: player_codes, player_data: player_data, sessions: sessions} = state
       ) do
-    # current_game = get_in(player_data, [code, :current_game])
-    # Hmm but it's not current game it's whatever that player's session is...
     current_game = sessions[code]
     new_sessions =
       if current_game do
+        ChatSessionManager.session_end(ChatSessionManager, current_game)
         remove_session(sessions, current_game)
       else
         sessions
@@ -151,22 +150,39 @@ defmodule SlippiChat.PlayerRegistry do
     should_add_session =
       game
       |> Enum.filter(fn code -> code != client_code end)
-      |> Enum.all?(fn code -> get_in(player_data, [code, :current_game]) == game end)
+      |> Enum.all?(fn code ->
+        maybe_metadata = get_player_metadata(state, code)
+        IO.puts("Got metadata from #{inspect(state.player_data)} with code #{code}: #{inspect(maybe_metadata)}")
+
+        if maybe_metadata do
+          maybe_metadata.current_game == game
+        else
+          false
+        end
+      end)
 
     should_remove_session =
       game
       |> Enum.filter(fn code -> code != client_code end)
-      |> Enum.all?(fn code -> get_in(player_data, [code, :current_game]) != game end)
+      |> Enum.all?(fn code ->
+        maybe_metadata = get_player_metadata(state, code)
+
+        if maybe_metadata do
+          maybe_metadata.current_game != game
+        else
+          true
+        end
+      end)
 
     new_sessions =
       cond do
         should_add_session ->
-          add_session(sessions, game)
           ChatSessionManager.session_start(ChatSessionManager, game)
+          add_session(sessions, game)
 
         should_remove_session ->
-          remove_session(sessions, game)
           ChatSessionManager.session_end(ChatSessionManager, game)
+          remove_session(sessions, game)
 
         true -> sessions
       end
@@ -182,17 +198,6 @@ defmodule SlippiChat.PlayerRegistry do
     Logger.debug("Game ended for client #{client_code}")
 
     {:reply, :ok, new_state}
-  end
-
-  defp add_session(sessions, game) do
-    Logger.debug("Session started for game: #{inspect(game)}")
-    additions = Enum.reduce(game, %{}, fn player_code, acc -> Map.put(acc, player_code, game) end)
-    Map.merge(sessions, additions)
-  end
-
-  defp remove_session(sessions, game) do
-    Logger.debug("Session removed for game: #{inspect(game)}")
-    Map.drop(sessions, game)
   end
 
   # -----
@@ -212,5 +217,18 @@ defmodule SlippiChat.PlayerRegistry do
     IO.inspect(state, label: "State")
 
     {:reply, :ok, state}
+  end
+
+  # ====
+
+  defp add_session(sessions, game) do
+    Logger.debug("Session started for game: #{inspect(game)}")
+    additions = Enum.reduce(game, %{}, fn player_code, acc -> Map.put(acc, player_code, game) end)
+    Map.merge(sessions, additions)
+  end
+
+  defp remove_session(sessions, game) do
+    Logger.debug("Session removed for game: #{inspect(game)}")
+    Map.drop(sessions, game)
   end
 end
