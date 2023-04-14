@@ -4,7 +4,7 @@ defmodule SlippiChat.PlayerRegistry do
   """
   use GenServer
 
-  alias SlippiChat.ChatSessionManager
+  alias SlippiChat.ChatSessions
 
   require Logger
 
@@ -115,7 +115,6 @@ defmodule SlippiChat.PlayerRegistry do
     current_game = sessions[code]
     new_sessions =
       if current_game do
-        ChatSessionManager.session_end(ChatSessionManager, current_game)
         remove_session(sessions, current_game)
       else
         sessions
@@ -177,11 +176,9 @@ defmodule SlippiChat.PlayerRegistry do
     new_sessions =
       cond do
         should_add_session ->
-          ChatSessionManager.session_start(ChatSessionManager, game)
           add_session(sessions, game)
 
         should_remove_session ->
-          ChatSessionManager.session_end(ChatSessionManager, game)
           remove_session(sessions, game)
 
         true -> sessions
@@ -208,7 +205,7 @@ defmodule SlippiChat.PlayerRegistry do
   end
 
   def handle_call(:crash, _from, state) do
-    1 / 0
+    # 1 / 0
     {:reply, :ok, state}
   end
 
@@ -222,13 +219,13 @@ defmodule SlippiChat.PlayerRegistry do
   # ====
 
   defp add_session(sessions, game) do
-    Logger.debug("Session started for game: #{inspect(game)}")
+    ChatSessions.session_start(game)
     additions = Enum.reduce(game, %{}, fn player_code, acc -> Map.put(acc, player_code, game) end)
     Map.merge(sessions, additions)
   end
 
   defp remove_session(sessions, game) do
-    Logger.debug("Session removed for game: #{inspect(game)}")
+    ChatSessions.session_end(game)
     Map.drop(sessions, game)
   end
 end
