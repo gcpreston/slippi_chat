@@ -4,7 +4,8 @@ defmodule SlippiChat.PlayerRegistry do
   """
   use GenServer
 
-  alias SlippiChat.ChatSessions
+  alias SlippiChat.ChatSessionRegistry
+  alias SlippiChat.ChatSessions.ChatSession
 
   require Logger
 
@@ -39,7 +40,7 @@ defmodule SlippiChat.PlayerRegistry do
   @type t :: %__MODULE__{
     player_codes: MapSet.t(player_code()),
     player_data: %{player_code() => PlayerMetadata.t()},
-    sessions: %{player_code() => game()}
+    sessions: %{player_code() => game() | nil}
   }
 
   defstruct player_codes: MapSet.new(), player_data: %{}, sessions: %{}
@@ -112,10 +113,10 @@ defmodule SlippiChat.PlayerRegistry do
         _from,
         %{player_codes: player_codes, player_data: player_data, sessions: sessions} = state
       ) do
-    current_game = sessions[code]
+    maybe_current_session = sessions[code]
     new_sessions =
-      if current_game do
-        remove_session(sessions, current_game)
+      if maybe_current_session do
+        remove_session(sessions, maybe_current_session)
       else
         sessions
       end
@@ -151,7 +152,6 @@ defmodule SlippiChat.PlayerRegistry do
       |> Enum.filter(fn code -> code != client_code end)
       |> Enum.all?(fn code ->
         maybe_metadata = get_player_metadata(state, code)
-        IO.puts("Got metadata from #{inspect(state.player_data)} with code #{code}: #{inspect(maybe_metadata)}")
 
         if maybe_metadata do
           maybe_metadata.current_game == game
@@ -218,14 +218,23 @@ defmodule SlippiChat.PlayerRegistry do
 
   # ====
 
-  defp add_session(sessions, game) do
-    ChatSessions.session_start(game)
-    additions = Enum.reduce(game, %{}, fn player_code, acc -> Map.put(acc, player_code, game) end)
+  defp add_session(sessions, players) do
+    ChatSessionRegistry.start_session(ChatSessionRegistry, players) |> dbg()
+    additions = Enum.reduce(players, %{}, fn player_code, acc -> Map.put(acc, player_code, players) end)
     Map.merge(sessions, additions)
   end
 
   defp remove_session(sessions, game) do
-    ChatSessions.session_end(game)
-    Map.drop(sessions, game)
+    # TODO: This feels frail
+    [player1 | _rest] = game
+
+    case ChatSessionRegistry.lookup(ChatSessionRegistry, player1) do
+      {:ok, {pid, _meta}} ->
+        ChatSession.end_session(pid)
+        Map.drop(sessions, game)
+
+      :error ->
+        sessions
+    end
   end
 end
