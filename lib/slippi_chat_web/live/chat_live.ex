@@ -12,6 +12,19 @@ defmodule SlippiChatWeb.ChatLive do
         <li>User: <%= @player_code %></li>
         <li>Chat session: <%= inspect(@players) %></li>
       </ul>
+
+      <%= if @chat_session_pid do %>
+        <h3>Chat</h3>
+        <div id="chat-log" phx-update="stream">
+          <li id={dom_id} :for={{dom_id, message} <- @streams.messages} class="chat-message">
+            <%= message.player_code %>: <%= message.content %>
+          </li>
+        </div>
+        <span>
+          <input type="text" id="chat-input" />
+          <button phx-click="send_message" phx-value-content="hello world!">Send</button>
+        </span>
+      <% end %>
     </div>
     """
   end
@@ -20,7 +33,7 @@ defmodule SlippiChatWeb.ChatLive do
   def mount(%{"code" => code}, _session, socket) do
     player_code = translate_code(code)
 
-    {chat_session_pid, players} =
+    {pid, players} =
       case ChatSessionRegistry.lookup(ChatSessionRegistry, player_code) do
         {:ok, {pid, %{players: players}}} -> {pid, players}
         :error -> {nil, nil}
@@ -31,18 +44,20 @@ defmodule SlippiChatWeb.ChatLive do
       # TODO: Module specifically for subscribe functions and notification helpers?
       Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{player_code}")
 
-      if chat_session_pid do
-        uuid = ChatSession.get_uuid(chat_session_pid)
+      if pid do
+        {:ok, uuid} = ChatSession.get_uuid(pid)
         Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{uuid}")
       end
     end
 
+    messages = if pid, do: ChatSession.list_messages(pid), else: []
+
     {:ok,
       socket
       |> assign(:player_code, player_code)
-      |> assign(:chat_session_pid, chat_session_pid)
+      |> assign(:chat_session_pid, pid)
       |> assign(:players, players)
-      |> stream(:messages, [])}
+      |> stream(:messages, messages)}
   end
 
   @impl true
@@ -54,6 +69,9 @@ defmodule SlippiChatWeb.ChatLive do
 
   @impl true
   def handle_info({[:session, :start], {players, pid}}, socket) do
+    {:ok, uuid} = ChatSession.get_uuid(pid)
+    Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{uuid}")
+
     {:noreply,
       socket
       |> assign(:chat_session_pid, pid)
@@ -68,7 +86,8 @@ defmodule SlippiChatWeb.ChatLive do
   end
 
   def handle_info({[:session, :message], new_message}, socket) do
-    {:noreply, socket |> stream_insert(:messages, new_message)}
+    IO.inspect(new_message, label: "LV got message")
+    {:noreply, socket |> stream_insert(:messages, new_message) |> IO.inspect()}
   end
 
   defp translate_code(player_code) do

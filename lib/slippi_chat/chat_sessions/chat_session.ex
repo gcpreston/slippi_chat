@@ -25,6 +25,10 @@ defmodule SlippiChat.ChatSessions.ChatSession do
     GenServer.call(server, {:message, message})
   end
 
+  def list_messages(server) do
+    GenServer.call(server, :list_messages)
+  end
+
   def end_session(server) do
     GenServer.stop(server)
   end
@@ -48,6 +52,10 @@ defmodule SlippiChat.ChatSessions.ChatSession do
       {:continue, {:notify_subscribers, [:session, :message], new_message}}}
   end
 
+  def handle_call(:list_messages, _from, state) do
+    {:reply, state.messages, state}
+  end
+
   @impl true
   def handle_continue({:notify_subscribers, [:session, _action] = event, result}, state) do
     Phoenix.PubSub.broadcast(
@@ -55,6 +63,9 @@ defmodule SlippiChat.ChatSessions.ChatSession do
       topic(state.uuid),
       {event, result}
     )
+    |> dbg()
+
+    {:noreply, state}
   end
 
   defp topic(uuid) when is_binary(uuid) do

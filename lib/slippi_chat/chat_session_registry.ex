@@ -74,7 +74,7 @@ defmodule SlippiChat.ChatSessionRegistry do
         {:reply,
           {:ok, pid},
           {names, refs},
-          {:continue, {:notify_subscribers, [:session, :start], players}}}
+          {:continue, {:notify_subscribers, [:session, :start], {players, pid}}}}
     end
   end
 
