@@ -1,4 +1,4 @@
-defmodule SlippiChatWeb.ChatLive do
+defmodule SlippiChatWeb.ChatLive.Root do
   use SlippiChatWeb, :live_view
 
   alias SlippiChat.ChatSessionRegistry
@@ -16,14 +16,16 @@ defmodule SlippiChatWeb.ChatLive do
       <%= if @chat_session_pid do %>
         <h3>Chat</h3>
         <div id="chat-log" phx-update="stream">
-          <li id={dom_id} :for={{dom_id, message} <- @streams.messages} class="chat-message">
-            <%= message.player_code %>: <%= message.content %>
+          <li id={dom_id} :for={{dom_id, message} <- Enum.reverse(@streams.messages)} class="chat-message">
+            <%= message.sender %>: <%= message.content %>
           </li>
         </div>
-        <span>
-          <input type="text" id="chat-input" />
-          <button phx-click="send_message" phx-value-content="hello world!">Send</button>
-        </span>
+        <.live_component
+          module={SlippiChatWeb.ChatLive.Message.Form}
+          id={:new}
+          sender={@player_code}
+          chat_session_pid={@chat_session_pid}
+        />
       <% end %>
     </div>
     """
@@ -57,7 +59,8 @@ defmodule SlippiChatWeb.ChatLive do
       |> assign(:player_code, player_code)
       |> assign(:chat_session_pid, pid)
       |> assign(:players, players)
-      |> stream(:messages, messages)}
+      |> stream(:messages, messages)
+      |> assign(:message, Message.new("", player_code))}
   end
 
   @impl true
@@ -86,8 +89,7 @@ defmodule SlippiChatWeb.ChatLive do
   end
 
   def handle_info({[:session, :message], new_message}, socket) do
-    IO.inspect(new_message, label: "LV got message")
-    {:noreply, socket |> stream_insert(:messages, new_message) |> IO.inspect()}
+    {:noreply, socket |> stream_insert(:messages, new_message)}
   end
 
   defp translate_code(player_code) do

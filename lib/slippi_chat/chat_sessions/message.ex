@@ -7,12 +7,12 @@ defmodule SlippiChat.ChatSessions.Message do
   @type t :: %__MODULE__{
     id: String.t(),
     content: String.t(),
-    player_code: player_code()
+    sender: player_code()
   }
 
-  defstruct [:id, :content, :player_code]
+  defstruct [:id, :content, :sender]
 
-  def new(content, player_code) do
-    %__MODULE__{id: Ecto.UUID.generate(), content: content, player_code: player_code}
+  def new(content, sender) do
+    %__MODULE__{id: Ecto.UUID.generate(), content: content, sender: sender}
   end
 end
