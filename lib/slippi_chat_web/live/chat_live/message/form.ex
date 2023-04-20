@@ -30,7 +30,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
           field={@form[:content]}
         />
         <:actions>
-          <.button>send</.button>
+          <.button>Send</.button>
         </:actions>
       </.simple_form>
     </div>
