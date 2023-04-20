@@ -11,20 +11,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_changeset()
      |> assign_form(changeset)}
-  end
-
-  defp change_message(params) do
-    data = %{}
-    types = %{content: :string, sender: :string}
-
-    {data, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-  end
-
-  def assign_changeset(socket) do
-    assign(socket, :changeset, change_message(%{}))
   end
 
   def render(assigns) do
@@ -41,7 +28,6 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
           type="text"
           autocomplete="off"
           field={@form[:content]}
-          value={Ecto.Changeset.get_change(@changeset, :content)}
         />
         <:actions>
           <.button>send</.button>
@@ -52,7 +38,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
   end
 
   def handle_event("update", params, socket) do
-    {:noreply, socket |> assign(:changeset, change_message(params))}
+    {:noreply, socket |> assign_form(change_message(params))}
   end
 
   def handle_event("save", %{"message" => %{"content" => content}}, socket) do
@@ -60,7 +46,15 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
     ChatSession.send_message(socket.assigns.chat_session_pid, message)
     empty_changeset = change_message(%{})
 
-    {:noreply, socket |> assign(:changeset, empty_changeset)}
+    {:noreply, socket |> assign_form(empty_changeset)}
+  end
+
+  defp change_message(params) do
+    data = %{}
+    types = %{content: :string, sender: :string}
+
+    {data, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
