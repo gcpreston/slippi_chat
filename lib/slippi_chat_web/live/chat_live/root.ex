@@ -26,6 +26,9 @@ defmodule SlippiChatWeb.ChatLive.Root do
           sender={@player_code}
           chat_session_pid={@chat_session_pid}
         />
+        <div class="mt-3">
+          <.button phx-click="disconnect">Disconnect</.button>
+        </div>
       <% end %>
     </div>
     """
@@ -70,6 +73,15 @@ defmodule SlippiChatWeb.ChatLive.Root do
     {:noreply, socket}
   end
 
+  def handle_event("disconnect", _value, socket) do
+    # For now, this will just end the session.
+    # In the future, I want a way to show not only that the clients are connected,
+    # but that the liveviews are connected. Then, "disconnect" would DC the liveview,
+    # and the opponent could see that this happened, but still have the chat log.
+    ChatSession.end_session(socket.assigns.chat_session_pid)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_info({[:session, :start], {players, pid}}, socket) do
     {:ok, uuid} = ChatSession.get_uuid(pid)
@@ -85,7 +97,8 @@ defmodule SlippiChatWeb.ChatLive.Root do
     {:noreply,
       socket
       |> assign(:chat_session_pid, nil)
-      |> assign(:players, nil)}
+      |> assign(:players, nil)
+      |> put_flash(:info, "Session ended")}
   end
 
   def handle_info({[:session, :message], new_message}, socket) do
