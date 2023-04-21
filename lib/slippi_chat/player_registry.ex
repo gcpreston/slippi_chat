@@ -92,6 +92,12 @@ defmodule SlippiChat.PlayerRegistry do
   end
 
   @impl true
+  def handle_info({[:session, :end], {players, _pid}}, state) do
+    new_sessions = handle_session_end(state.sessions, players)
+    {:noreply, %{state | sessions: new_sessions}}
+  end
+
+  @impl true
   def handle_call(
         {:register, code},
         _from,
@@ -231,10 +237,14 @@ defmodule SlippiChat.PlayerRegistry do
     case ChatSessionRegistry.lookup(ChatSessionRegistry, player1) do
       {:ok, {pid, _meta}} ->
         ChatSession.end_session(pid)
-        Map.drop(sessions, game)
+        handle_session_end(sessions, game)
 
       :error ->
         sessions
     end
+  end
+
+  defp handle_session_end(sessions, game) do
+    Map.drop(sessions, game)
   end
 end

@@ -86,6 +86,8 @@ defmodule SlippiChat.ChatSessionRegistry do
       :ets.delete(names, player_code)
     end)
 
+    send(SlippiChat.PlayerRegistry, {[:session, :end], {players, pid}})
+
     {:noreply, {names, refs}, {:continue, {:notify_subscribers, [:session, :end], {players, pid}}}}
   end
 
