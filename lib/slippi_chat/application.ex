@@ -20,7 +20,6 @@ defmodule SlippiChat.Application do
       SlippiChatWeb.Endpoint,
       # Start a worker by calling: SlippiChat.Worker.start_link(arg)
       # {SlippiChat.Worker, arg}
-      SlippiChat.PlayerRegistry,
       # TODO: Link the following 2 children so they die together but don't bring everything else down
       {DynamicSupervisor, name: SlippiChat.ChatSessionSupervisor, strategy: :one_for_one},
       {SlippiChat.ChatSessionRegistry, name: SlippiChat.ChatSessionRegistry}

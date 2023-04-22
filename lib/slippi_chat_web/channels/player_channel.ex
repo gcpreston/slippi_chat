@@ -3,25 +3,25 @@ defmodule SlippiChat.PlayerChannel do
 
   require Logger
 
-  alias SlippiChat.PlayerRegistry
+  alias SlippiChat.ChatSessionRegistry
 
   def join("players:" <> player_code, _payload, socket) do
-    PlayerRegistry.register(PlayerRegistry, player_code)
-    {:ok, socket |> assign(:player_code, player_code)}
+    ChatSessionRegistry.register_client(ChatSessionRegistry, player_code)
+    {:ok, socket |> assign(:client_code, player_code)}
   end
 
   def terminate(_reason, socket) do
-    PlayerRegistry.remove(PlayerRegistry, socket.assigns.player_code)
+    ChatSessionRegistry.remove_client(ChatSessionRegistry, socket.assigns.client_code)
   end
 
-  def handle_in("game_started", %{"client" => client_code, "players" => player_codes}, socket)
+  def handle_in("game_started", %{"players" => player_codes}, socket)
       when is_list(player_codes) do
-    PlayerRegistry.game_started(PlayerRegistry, client_code, player_codes)
+    ChatSessionRegistry.game_started(ChatSessionRegistry, socket.assigns.client_code, player_codes)
     {:reply, :ok, socket}
   end
 
-  def handle_in("game_ended", %{"client" => client_code}, socket) do
-    PlayerRegistry.game_ended(PlayerRegistry, client_code)
+  def handle_in("game_ended", _params, socket) do
+    ChatSessionRegistry.game_ended(ChatSessionRegistry, socket.assigns.client_code)
     {:reply, :ok, socket}
   end
 end

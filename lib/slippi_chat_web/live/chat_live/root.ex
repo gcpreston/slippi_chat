@@ -40,10 +40,9 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
     {pid, players} =
       case ChatSessionRegistry.lookup(ChatSessionRegistry, player_code) do
-        {:ok, {pid, %{players: players}}} -> {pid, players}
+        {:ok, %{current_chat_session: %{pid: pid, players: players}}} -> {pid, players}
         :error -> {nil, nil}
       end
-      |> dbg()
 
     if connected?(socket) do
       # TODO: Module specifically for subscribe functions and notification helpers?

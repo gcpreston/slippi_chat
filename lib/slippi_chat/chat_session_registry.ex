@@ -2,16 +2,29 @@
 defmodule SlippiChat.ChatSessionRegistry do
   use GenServer
 
+  alias SlippiChat.ChatSessions.ChatSession
+
+  require Logger
+
   @pubsub_name SlippiChat.PubSub
   @pubsub_topic "chat_sessions"
 
-  ## ETS
-  # This module creates an ETS table, named the same as the GenServer name.
-  #
-  # Format:
-  # - key: player_code
-  # - value: {pid, meta}
-  #   * where meta: %{players: player_codes, uuid: uuid}
+  @moduledoc """
+  This module creates an ETS table, named the same as the GenServer name.
+  The ETS table is a mapping of player code to information about the current
+  state of the player.
+
+  Format:
+
+  player_code => %{
+    current_game: list(player_code),
+    current_chat_session: %{
+      pid: pid()
+      players: list(player_code),
+      uuid: uuid()
+    }
+  }
+  """
 
   ## Client API
 
@@ -26,9 +39,9 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @doc """
-  Looks up the chat session pid for `player_code` stored in `server`.
+  Looks up the metadata for `player_code` stored in `server`.
 
-  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
+  Returns `{:ok, data}` if the bucket exists, `:error` otherwise.
   """
   def lookup(server, player_code) do
     case :ets.lookup(server, player_code) do
@@ -38,62 +51,157 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @doc """
-  Ensures there is a chat session for the given `players` in `server`.
+  Ensure the client code is registered in the server.
   """
-  def start_session(server, players) do
-    GenServer.call(server, {:start, players})
+  def register_client(server, client_code) do
+    GenServer.call(server, {:register_client, client_code})
+  end
+
+  @doc """
+  Ensure the client code is not registered in the server.
+  """
+  def remove_client(server, client_code) do
+    GenServer.call(server, {:remove_client, client_code})
+  end
+
+  @doc """
+  Handle a game being started for a client. Starts or stops sessions accordingly.
+  """
+  def game_started(server, client_code, players) do
+    GenServer.call(server, {:game_started, client_code, players})
+  end
+
+  @doc """
+  Handle a game ending for a client.
+  """
+  def game_ended(server, client_code) do
+    GenServer.call(server, {:game_ended, client_code})
   end
 
   ## Server callbacks
 
   @impl true
   def init(table) do
-    names = :ets.new(table, [:named_table, read_concurrency: true])
+    players_ets = :ets.new(table, [:named_table, read_concurrency: true])
     refs  = %{}
-    {:ok, {names, refs}}
+    {:ok, {players_ets, refs}}
   end
 
   @impl true
-  def handle_call({:start, players}, _from, {names, refs}) do
-    # TODO: This feels frail
-    [player1 | _rest] = players
+  def handle_call({:register_client, client_code}, _from, {players_ets, _refs} = state) do
+    if lookup(players_ets, client_code) == :error do
+      data = %{current_game: nil, current_chat_session: nil}
+      :ets.insert(players_ets, {client_code, data})
+    end
 
-    case lookup(names, player1) do
-      {:ok, pid} ->
-        {:reply, {:ok, pid}, {names, refs}}
-      :error ->
-        {:ok, pid} = DynamicSupervisor.start_child(SlippiChat.ChatSessionSupervisor, SlippiChat.ChatSessions.ChatSession) |> dbg()
-        ref = Process.monitor(pid)
-        refs = Map.put(refs, ref, players)
+    {:reply, :ok, state}
+  end
 
-        Enum.each(players, fn player_code ->
-          data = {pid, %{players: players, uuid: nil}}
-          :ets.insert(names, {player_code, data})
-        end)
+  def handle_call({:remove_client, client_code}, _from, {players_ets, _refs} = state) do
+    with {:ok, data} <- lookup(players_ets, client_code) do
+      :ets.delete(players_ets, client_code)
+      ChatSession.end_session(data.current_chat_session.pid)
+    end
 
-        {:reply,
-          {:ok, pid},
-          {names, refs},
-          {:continue, {:notify_subscribers, [:session, :start], {players, pid}}}}
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:game_started, client_code, players}, _from, {players_ets, refs}) do
+    Logger.debug("Game started for client #{client_code}: #{inspect(players)}")
+    update_client_data(players_ets, client_code, players)
+    player_data = get_player_data(players_ets, players)
+    stop_old_sessions(player_data, players)
+
+    if should_start_session(player_data, client_code, players) do
+      {pid, new_refs} = start_session(players_ets, refs, player_data, players)
+
+      {:reply,
+        {:ok, pid},
+        {players_ets, new_refs},
+        {:continue, {:notify_subscribers, [:session, :start], {players, pid}}}}
+    else
+      {:reply, :ok, {players_ets, refs}}
     end
   end
 
-  @impl true
-  def handle_info({:DOWN, ref, :process, pid, _reason}, {names, refs}) do
-    {players, refs} = Map.pop(refs, ref)
+  def handle_call({:game_ended, client_code}, _from, {players_ets, _refs} = state) do
+    Logger.debug("Game ended for client #{client_code}")
+
+    with {:ok, data} <- lookup(players_ets, client_code) do
+      new_data = put_in(data.current_game, nil)
+      :ets.insert(players_ets, {client_code, new_data})
+    end
+
+    {:reply, :ok, state}
+  end
+
+  defp get_player_data(players_ets, players) do
+    Enum.reduce(players, %{}, fn player_code, acc ->
+      case lookup(players_ets, player_code) do
+        {:ok, data} -> Map.put(acc, player_code, data)
+        :error -> Map.put(acc, player_code, nil)
+      end
+    end)
+  end
+
+  defp update_client_data(players_ets, client_code, players) do
+    {:ok, %{current_chat_session: client_chat_session}} = lookup(players_ets, client_code)
+    new_client_data = %{current_game: players, current_chat_session: client_chat_session}
+    :ets.insert(players_ets, {client_code, new_client_data})
+  end
+
+  defp stop_old_sessions(player_data, players) do
+    Enum.each(players, fn player_code ->
+      with data when not is_nil(data) <- player_data[player_code],
+           %{current_chat_session: %{pid: pid, players: current_session_players}} <- data
+      do
+        if current_session_players != players do
+          ChatSession.end_session(pid)
+        end
+      end
+    end)
+  end
+
+  defp should_start_session(player_data, client_code, players) do
+    if get_in(player_data, [client_code, :current_chat_session, :players]) != players do
+      Enum.all?(players, fn player_code ->
+        with data when not is_nil(data) <- player_data[player_code] do
+          %{current_game: current_game} = data
+          current_game == players
+        end
+      end)
+    else
+      false
+    end
+  end
+
+  defp start_session(players_ets, refs, player_data, players) do
+    {:ok, pid} = DynamicSupervisor.start_child(SlippiChat.ChatSessionSupervisor, SlippiChat.ChatSessions.ChatSession)
+    ref = Process.monitor(pid)
+    new_refs = Map.put(refs, ref, players)
 
     Enum.each(players, fn player_code ->
-      :ets.delete(names, player_code)
+      if data = player_data[player_code] do
+        data = put_in(data.current_chat_session, %{pid: pid, players: players, uuid: nil}) # TODO: uuid
+        :ets.insert(players_ets, {player_code, data})
+      end
     end)
 
-    send(SlippiChat.PlayerRegistry, {[:session, :end], {players, pid}})
-
-    {:noreply, {names, refs}, {:continue, {:notify_subscribers, [:session, :end], {players, pid}}}}
+    {pid, new_refs}
   end
 
   @impl true
-  def handle_info(_msg, state) do
-    {:noreply, state}
+  def handle_info({:DOWN, ref, :process, pid, _reason}, {players_ets, refs}) do
+    {players, refs} = Map.pop(refs, ref)
+
+    Enum.each(players, fn player_code ->
+      with {:ok, data} <- lookup(players_ets, player_code) do
+        new_data = Map.put(data, :current_chat_session, nil)
+        :ets.insert(players_ets, {player_code, new_data})
+      end
+    end)
+
+    {:noreply, {players_ets, refs}, {:continue, {:notify_subscribers, [:session, :end], {players, pid}}}}
   end
 
   @impl true
