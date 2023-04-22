@@ -96,8 +96,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
     {:noreply,
       socket
       |> assign(:chat_session_pid, nil)
-      |> assign(:players, nil)
-      |> put_flash(:info, "Session ended")}
+      |> assign(:players, nil)}
   end
 
   def handle_info({[:session, :message], new_message}, socket) do
