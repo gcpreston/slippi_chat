@@ -100,7 +100,10 @@ defmodule SlippiChat.ChatSessionRegistry do
   def handle_call({:remove_client, client_code}, _from, {players_ets, _refs} = state) do
     with {:ok, data} <- lookup(players_ets, client_code) do
       :ets.delete(players_ets, client_code)
-      ChatSession.end_session(data.current_chat_session.pid)
+
+      with %{current_chat_session: %{pid: pid}} <- data do
+        ChatSession.end_session(pid)
+      end
     end
 
     {:reply, :ok, state}
