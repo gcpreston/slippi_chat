@@ -3,7 +3,7 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
   alias SlippiChat.ChatSessionRegistry
 
-  @registry_name TestRegistry
+  @registry_name __MODULE__.TestRegistry
 
   setup do
     pid = start_supervised!({ChatSessionRegistry, name: @registry_name})
@@ -156,6 +156,24 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
       {:ok, %{current_game: ["ALIC#3", "BOB#1"], current_chat_session: %{pid: ^pid}}} =
         ChatSessionRegistry.lookup(@registry_name, "BOB#1")
+    end
+  end
+
+  describe "event handlers" do
+    test "removes client sessions when session process terminates" do
+      ChatSessionRegistry.register_client(@registry_name, "ALIC#3")
+      ChatSessionRegistry.register_client(@registry_name, "BOB#1")
+
+      :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1"])
+      {:ok, pid} = ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
+
+      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:BOB#1")
+      GenServer.stop(pid)
+
+      assert_receive {[:session, :end], {["ALIC#3", "BOB#1"], ^pid}}
+
+      {:ok, %{current_chat_session: nil}} = ChatSessionRegistry.lookup(@registry_name, "ALIC#3")
+      {:ok, %{current_chat_session: nil}} = ChatSessionRegistry.lookup(@registry_name, "BOB#1")
     end
   end
 end
