@@ -45,6 +45,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
     {pid, players} =
       case ChatSessionRegistry.lookup(ChatSessionRegistry, player_code) do
         {:ok, %{current_chat_session: %{pid: pid, players: players}}} -> {pid, players}
+        {:ok, %{current_chat_session: nil}} -> {nil, nil}
         :error -> {nil, nil}
       end
 
