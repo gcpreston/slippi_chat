@@ -44,9 +44,9 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
     {pid, players} =
       case ChatSessionRegistry.lookup(ChatSessionRegistry, player_code) do
-        {:ok, %{current_chat_session: %{pid: pid, players: players}}} -> {pid, players}
-        {:ok, %{current_chat_session: nil}} -> {nil, nil}
         :error -> {nil, nil}
+        {:ok, %{current_chat_session: nil}} -> {nil, nil}
+        {:ok, %{current_chat_session: session_data}} -> {session_data.pid, session_data.players}
       end
 
     if connected?(socket) do
@@ -66,8 +66,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
      |> assign(:player_code, player_code)
      |> assign(:chat_session_pid, pid)
      |> assign(:players, players)
-     |> stream(:messages, messages)
-     |> assign(:message, Message.new("", player_code))}
+     |> stream(:messages, messages)}
   end
 
   @impl true
