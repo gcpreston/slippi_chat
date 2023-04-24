@@ -16,7 +16,12 @@ defmodule SlippiChat.PlayerChannel do
 
   def handle_in("game_started", %{"players" => player_codes}, socket)
       when is_list(player_codes) do
-    ChatSessionRegistry.game_started(ChatSessionRegistry, socket.assigns.client_code, player_codes)
+    ChatSessionRegistry.game_started(
+      ChatSessionRegistry,
+      socket.assigns.client_code,
+      player_codes
+    )
+
     {:reply, :ok, socket}
   end
 

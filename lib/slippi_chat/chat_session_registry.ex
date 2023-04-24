@@ -83,7 +83,7 @@ defmodule SlippiChat.ChatSessionRegistry do
   @impl true
   def init(table) do
     players_ets = :ets.new(table, [:named_table, read_concurrency: true])
-    refs  = %{}
+    refs = %{}
     {:ok, {players_ets, refs}}
   end
 
@@ -118,10 +118,8 @@ defmodule SlippiChat.ChatSessionRegistry do
     if should_start_session(player_data, client_code, players) do
       {pid, new_refs} = start_session(players_ets, refs, player_data, players)
 
-      {:reply,
-        {:ok, pid},
-        {players_ets, new_refs},
-        {:continue, {:notify_subscribers, [:session, :start], {players, pid}}}}
+      {:reply, {:ok, pid}, {players_ets, new_refs},
+       {:continue, {:notify_subscribers, [:session, :start], {players, pid}}}}
     else
       {:reply, :ok, {players_ets, refs}}
     end
@@ -156,8 +154,7 @@ defmodule SlippiChat.ChatSessionRegistry do
   defp stop_old_sessions(player_data, players) do
     Enum.each(players, fn player_code ->
       with data when not is_nil(data) <- player_data[player_code],
-           %{current_chat_session: %{pid: pid, players: current_session_players}} <- data
-      do
+           %{current_chat_session: %{pid: pid, players: current_session_players}} <- data do
         if current_session_players != players do
           ChatSession.end_session(pid)
         end
@@ -179,13 +176,19 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   defp start_session(players_ets, refs, player_data, players) do
-    {:ok, pid} = DynamicSupervisor.start_child(SlippiChat.ChatSessionSupervisor, SlippiChat.ChatSessions.ChatSession)
+    {:ok, pid} =
+      DynamicSupervisor.start_child(
+        SlippiChat.ChatSessionSupervisor,
+        SlippiChat.ChatSessions.ChatSession
+      )
+
     ref = Process.monitor(pid)
     new_refs = Map.put(refs, ref, players)
 
     Enum.each(players, fn player_code ->
       if data = player_data[player_code] do
-        data = put_in(data.current_chat_session, %{pid: pid, players: players, uuid: nil}) # TODO: uuid
+        # TODO: uuid
+        data = put_in(data.current_chat_session, %{pid: pid, players: players, uuid: nil})
         :ets.insert(players_ets, {player_code, data})
       end
     end)
@@ -204,11 +207,15 @@ defmodule SlippiChat.ChatSessionRegistry do
       end
     end)
 
-    {:noreply, {players_ets, refs}, {:continue, {:notify_subscribers, [:session, :end], {players, pid}}}}
+    {:noreply, {players_ets, refs},
+     {:continue, {:notify_subscribers, [:session, :end], {players, pid}}}}
   end
 
   @impl true
-  def handle_continue({:notify_subscribers, [:session, _action] = event, {players, _pid} = result}, state) do
+  def handle_continue(
+        {:notify_subscribers, [:session, _action] = event, {players, _pid} = result},
+        state
+      ) do
     Enum.each(players, fn player_code ->
       Phoenix.PubSub.broadcast(
         @pubsub_name,

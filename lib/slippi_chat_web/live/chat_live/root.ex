@@ -16,7 +16,11 @@ defmodule SlippiChatWeb.ChatLive.Root do
       <%= if @chat_session_pid do %>
         <h3>Chat</h3>
         <div id="chat-log" phx-update="stream">
-          <li id={dom_id} :for={{dom_id, message} <- Enum.reverse(@streams.messages)} class="chat-message">
+          <li
+            :for={{dom_id, message} <- Enum.reverse(@streams.messages)}
+            id={dom_id}
+            class="chat-message"
+          >
             <%= message.sender %>: <%= message.content %>
           </li>
         </div>
@@ -57,12 +61,12 @@ defmodule SlippiChatWeb.ChatLive.Root do
     messages = if pid, do: ChatSession.list_messages(pid), else: []
 
     {:ok,
-      socket
-      |> assign(:player_code, player_code)
-      |> assign(:chat_session_pid, pid)
-      |> assign(:players, players)
-      |> stream(:messages, messages)
-      |> assign(:message, Message.new("", player_code))}
+     socket
+     |> assign(:player_code, player_code)
+     |> assign(:chat_session_pid, pid)
+     |> assign(:players, players)
+     |> stream(:messages, messages)
+     |> assign(:message, Message.new("", player_code))}
   end
 
   @impl true
@@ -87,16 +91,16 @@ defmodule SlippiChatWeb.ChatLive.Root do
     Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{uuid}")
 
     {:noreply,
-      socket
-      |> assign(:chat_session_pid, pid)
-      |> assign(:players, players)}
+     socket
+     |> assign(:chat_session_pid, pid)
+     |> assign(:players, players)}
   end
 
   def handle_info({[:session, :end], _result}, socket) do
     {:noreply,
-      socket
-      |> assign(:chat_session_pid, nil)
-      |> assign(:players, nil)}
+     socket
+     |> assign(:chat_session_pid, nil)
+     |> assign(:players, nil)}
   end
 
   def handle_info({[:session, :message], new_message}, socket) do

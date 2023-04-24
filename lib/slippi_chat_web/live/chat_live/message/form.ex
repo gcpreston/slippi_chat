@@ -24,11 +24,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
         phx-change="update"
         phx-target={@myself}
       >
-        <.input
-          type="text"
-          autocomplete="off"
-          field={@form[:content]}
-        />
+        <.input type="text" autocomplete="off" field={@form[:content]} />
         <:actions>
           <.button>Send</.button>
         </:actions>

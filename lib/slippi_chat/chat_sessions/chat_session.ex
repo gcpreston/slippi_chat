@@ -46,10 +46,8 @@ defmodule SlippiChat.ChatSessions.ChatSession do
   end
 
   def handle_call({:message, new_message}, _from, state) do
-    {:reply,
-      {:ok, new_message},
-      %{state | messages: [new_message | state.messages]},
-      {:continue, {:notify_subscribers, [:session, :message], new_message}}}
+    {:reply, {:ok, new_message}, %{state | messages: [new_message | state.messages]},
+     {:continue, {:notify_subscribers, [:session, :message], new_message}}}
   end
 
   def handle_call(:list_messages, _from, state) do
@@ -63,7 +61,6 @@ defmodule SlippiChat.ChatSessions.ChatSession do
       topic(state.uuid),
       {event, result}
     )
-    |> dbg()
 
     {:noreply, state}
   end

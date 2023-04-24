@@ -5,10 +5,10 @@ defmodule SlippiChat.ChatSessions.Message do
 
   @type player_code :: String.t()
   @type t :: %__MODULE__{
-    id: String.t(),
-    content: String.t(),
-    sender: player_code()
-  }
+          id: String.t(),
+          content: String.t(),
+          sender: player_code()
+        }
 
   defstruct [:id, :content, :sender]
 
