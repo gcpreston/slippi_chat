@@ -19,7 +19,6 @@ defmodule SlippiChatWeb.Router do
 
     get "/", PageController, :home
 
-    live "/debug", PlayerRegistryLive, :index
     live "/chat/:code", ChatLive.Root, :show
   end
 
