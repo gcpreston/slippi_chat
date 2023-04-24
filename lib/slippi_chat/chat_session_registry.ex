@@ -155,7 +155,7 @@ defmodule SlippiChat.ChatSessionRegistry do
     Enum.each(players, fn player_code ->
       with data when not is_nil(data) <- player_data[player_code],
            %{current_chat_session: %{pid: pid, players: current_session_players}} <- data do
-        if current_session_players != players do
+        if Process.alive?(pid) && current_session_players != players do
           ChatSession.end_session(pid)
         end
       end

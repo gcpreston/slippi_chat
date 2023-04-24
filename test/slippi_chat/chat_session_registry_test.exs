@@ -98,7 +98,7 @@ defmodule SlippiChat.ChatSessionRegistryTest do
       Enum.each(["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"], assert_player_data)
     end
 
-    test "stops old sessions when a new session starts" do
+    test "stops old sessions when a new session starts, case 1" do
       ChatSessionRegistry.register_client(@registry_name, "ALIC#3")
       ChatSessionRegistry.register_client(@registry_name, "BOB#1")
       ChatSessionRegistry.register_client(@registry_name, "CAT#2")
@@ -132,6 +132,29 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
       refute Process.alive?(pid1)
       refute Process.alive?(pid2)
+    end
+
+    test "stops old sessions when a new session starts, case 2" do
+      ChatSessionRegistry.register_client(@registry_name, "ALIC#3")
+      ChatSessionRegistry.register_client(@registry_name, "BOB#1")
+      ChatSessionRegistry.register_client(@registry_name, "EVE#5")
+
+      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:ALIC#3")
+
+      # Session between ALIC#3 and BOB#1
+      :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1"])
+      {:ok, pid} = ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
+
+      # Game start between EVE#5, ALIC#3, and BOB#1
+      :ok = ChatSessionRegistry.game_started(@registry_name, "EVE#5", ["ALIC#3", "BOB#1", "EVE#5"])
+
+      # Old session for ALIC#3 and BOB#1 is stopped
+      assert_receive {[:session, :end], {["ALIC#3", "BOB#1"], ^pid}}
+
+      {:ok, %{current_game: ["ALIC#3", "BOB#1"], current_chat_session: nil}} =
+        ChatSessionRegistry.lookup(@registry_name, "ALIC#3")
+
+      refute Process.alive?(pid)
     end
   end
 
