@@ -4,7 +4,7 @@ defmodule SlippiChat.ChatSessionTest do
   alias SlippiChat.ChatSessionRegistry
   alias SlippiChat.ChatSessions.{ChatSession, Message}
 
-  @registry_name __MODULE__.TestRegistry
+  @registry_name __MODULE__
 
   setup do
     start_supervised!({ChatSessionRegistry, name: @registry_name})

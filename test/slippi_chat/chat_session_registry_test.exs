@@ -3,7 +3,7 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
   alias SlippiChat.ChatSessionRegistry
 
-  @registry_name __MODULE__.TestRegistry
+  @registry_name __MODULE__
 
   setup do
     pid = start_supervised!({ChatSessionRegistry, name: @registry_name})
