@@ -49,4 +49,9 @@ defmodule SlippiChat.PlayerChannel do
     push(socket, "session_end", players)
     {:noreply, socket}
   end
+
+  def handle_info({[:session, :message], new_message}, socket) do
+    push(socket, "session_message", new_message)
+    {:noreply, socket}
+  end
 end
