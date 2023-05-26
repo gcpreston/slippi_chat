@@ -1,17 +1,23 @@
-defmodule SlippiChat.PlayerChannel do
+defmodule SlippiChat.ClientChannel do
   use Phoenix.Channel
-
-  require Logger
 
   alias SlippiChat.ChatSessionRegistry
   alias SlippiChat.ChatSessions.ChatSession
 
   @impl true
-  def join("players:" <> player_code, _payload, socket) do
-    ChatSessionRegistry.register_client(ChatSessionRegistry, player_code)
-    Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{player_code}")
+  def join("clients", payload, socket) do
+    if authorized?(payload) do
+      ChatSessionRegistry.register_client(ChatSessionRegistry, player_code)
+      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{player_code}")
 
-    {:ok, socket |> assign(:client_code, player_code)}
+      {:ok, socket |> assign(:client_code, payload["client_code"])}
+    else
+      {:error, %{reason: "unauthorized"}}
+    end
+  end
+
+  defp authorized?(payload) do
+    Map.has_key?(payload, "client_code") && is_binary(payload["client_code"])
   end
 
   @impl true
