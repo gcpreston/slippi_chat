@@ -16,12 +16,13 @@ defmodule SlippiChat.ChatSessionRegistry do
 
   Format:
 
-  player_code => %{
+  client_uuid => %{
+    client_code: player_code,
     current_game: list(player_code),
     current_chat_session: %{
       pid: pid()
       players: list(player_code),
-      uuid: uuid()
+      uuid: uuid() # TODO
     }
   }
   """
@@ -39,13 +40,13 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @doc """
-  Looks up the metadata for `player_code` stored in `server`.
+  Looks up the metadata for `client_uuid` stored in `server`.
 
-  Returns `{:ok, data}` if the bucket exists, `:error` otherwise.
+  Returns `{:ok, data}` if the client exists, `:error` otherwise.
   """
-  def lookup(server, player_code) do
-    case :ets.lookup(server, player_code) do
-      [{^player_code, data}] -> {:ok, data}
+  def lookup(server, client_uuid) do
+    case :ets.lookup(server, client_uuid) do
+      [{^client_uuid, data}] -> {:ok, data}
       [] -> :error
     end
   end
@@ -53,29 +54,29 @@ defmodule SlippiChat.ChatSessionRegistry do
   @doc """
   Ensure the client code is registered in the server.
   """
-  def register_client(server, client_code) do
-    GenServer.call(server, {:register_client, client_code})
+  def register_client(server, client_uuid, client_code) do
+    GenServer.call(server, {:register_client, client_uuid, client_code})
   end
 
   @doc """
   Ensure the client code is not registered in the server.
   """
-  def remove_client(server, client_code) do
-    GenServer.call(server, {:remove_client, client_code})
+  def remove_client(server, client_uuid) do
+    GenServer.call(server, {:remove_client, client_uuid})
   end
 
   @doc """
   Handle a game being started for a client. Starts or stops sessions accordingly.
   """
-  def game_started(server, client_code, players) do
-    GenServer.call(server, {:game_started, client_code, players})
+  def game_started(server, client_uuid, players) do
+    GenServer.call(server, {:game_started, client_uuid, players})
   end
 
   @doc """
   Handle a game ending for a client.
   """
-  def game_ended(server, client_code) do
-    GenServer.call(server, {:game_ended, client_code})
+  def game_ended(server, client_uuid) do
+    GenServer.call(server, {:game_ended, client_uuid})
   end
 
   ## Server callbacks
@@ -88,18 +89,18 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @impl true
-  def handle_call({:register_client, client_code}, _from, {players_ets, _refs} = state) do
-    if lookup(players_ets, client_code) == :error do
-      data = %{current_game: nil, current_chat_session: nil}
-      :ets.insert(players_ets, {client_code, data})
+  def handle_call({:register_client, client_uuid, client_code}, _from, {players_ets, _refs} = state) do
+    if lookup(players_ets, client_uuid) == :error do
+      data = %{client_code: client_code, current_game: nil, current_chat_session: nil}
+      :ets.insert(players_ets, {client_uuid, data})
     end
 
     {:reply, :ok, state}
   end
 
-  def handle_call({:remove_client, client_code}, _from, {players_ets, _refs} = state) do
-    with {:ok, data} <- lookup(players_ets, client_code) do
-      :ets.delete(players_ets, client_code)
+  def handle_call({:remove_client, client_uuid}, _from, {players_ets, _refs} = state) do
+    with {:ok, data} <- lookup(players_ets, client_uuid) do
+      :ets.delete(players_ets, client_uuid)
 
       with %{current_chat_session: %{pid: pid}} <- data do
         ChatSession.end_session(pid)
@@ -109,13 +110,22 @@ defmodule SlippiChat.ChatSessionRegistry do
     {:reply, :ok, state}
   end
 
-  def handle_call({:game_started, client_code, players}, _from, {players_ets, refs}) do
-    Logger.debug("Game started for client #{client_code}: #{inspect(players)}")
-    update_client_data(players_ets, client_code, players)
+  # So for this, we can no longer just look up the player codes in the current game
+  # directly in ETS. We need to store a mapping of player code to all associated
+  # client UUIDs.
+  #
+  # Part of me wonders if this flow should be inverted. Rather than first and foremost
+  # track clients and their state and look to start chat sessions as events change,
+  # maybe we always start a chat session for active games. Then, we know it exists,
+  # and if other people join with the same info then they also get connected to it.
+
+  def handle_call({:game_started, client_uuid, players}, _from, {players_ets, refs}) do
+    Logger.debug("Game started for client #{client_uuid}: #{inspect(players)}")
+    update_client_data(players_ets, client_uuid, players)
     player_data = get_player_data(players_ets, players)
     stop_old_sessions(player_data, players)
 
-    if should_start_session(player_data, client_code, players) do
+    if should_start_session(player_data, client_uuid, players) do
       {pid, new_refs} = start_session(players_ets, refs, player_data, players)
 
       {:reply, {:ok, pid}, {players_ets, new_refs},
@@ -125,12 +135,12 @@ defmodule SlippiChat.ChatSessionRegistry do
     end
   end
 
-  def handle_call({:game_ended, client_code}, _from, {players_ets, _refs} = state) do
-    Logger.debug("Game ended for client #{client_code}")
+  def handle_call({:game_ended, client_uuid}, _from, {players_ets, _refs} = state) do
+    Logger.debug("Game ended for client #{client_uuid}")
 
-    with {:ok, data} <- lookup(players_ets, client_code) do
+    with {:ok, data} <- lookup(players_ets, client_uuid) do
       new_data = put_in(data.current_game, nil)
-      :ets.insert(players_ets, {client_code, new_data})
+      :ets.insert(players_ets, {client_uuid, new_data})
     end
 
     {:reply, :ok, state}
@@ -145,10 +155,10 @@ defmodule SlippiChat.ChatSessionRegistry do
     end)
   end
 
-  defp update_client_data(players_ets, client_code, players) do
-    {:ok, %{current_chat_session: client_chat_session}} = lookup(players_ets, client_code)
+  defp update_client_data(players_ets, client_uuid, players) do
+    {:ok, %{current_chat_session: client_chat_session}} = lookup(players_ets, client_uuid)
     new_client_data = %{current_game: players, current_chat_session: client_chat_session}
-    :ets.insert(players_ets, {client_code, new_client_data})
+    :ets.insert(players_ets, {client_uuid, new_client_data})
   end
 
   defp stop_old_sessions(player_data, players) do
@@ -162,8 +172,8 @@ defmodule SlippiChat.ChatSessionRegistry do
     end)
   end
 
-  defp should_start_session(player_data, client_code, players) do
-    if get_in(player_data, [client_code, :current_chat_session, :players]) != players do
+  defp should_start_session(player_data, client_uuid, players) do
+    if get_in(player_data, [client_uuid, :current_chat_session, :players]) != players do
       Enum.all?(players, fn player_code ->
         with data when not is_nil(data) <- player_data[player_code] do
           %{current_game: current_game} = data
@@ -187,7 +197,7 @@ defmodule SlippiChat.ChatSessionRegistry do
 
     Enum.each(players, fn player_code ->
       if data = player_data[player_code] do
-        # TODO: uuid
+        # TODO: chat session uuid
         data = put_in(data.current_chat_session, %{pid: pid, players: players, uuid: nil})
         :ets.insert(players_ets, {player_code, data})
       end

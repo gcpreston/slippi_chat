@@ -7,10 +7,15 @@ defmodule SlippiChat.ClientChannel do
   @impl true
   def join("clients", payload, socket) do
     if authorized?(payload) do
-      ChatSessionRegistry.register_client(ChatSessionRegistry, player_code)
-      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{player_code}")
+      uuid = Ecto.UUID.generate()
+      client_code = payload["client_code"]
+      ChatSessionRegistry.register_client(ChatSessionRegistry, uuid, client_code)
+      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{client_code}")
 
-      {:ok, socket |> assign(:client_code, payload["client_code"])}
+      {:ok,
+        socket
+        |> assign(:client_uuid, uuid)
+        |> assign(:client_code, client_code)}
     else
       {:error, %{reason: "unauthorized"}}
     end
@@ -30,7 +35,7 @@ defmodule SlippiChat.ClientChannel do
       when is_list(player_codes) do
     ChatSessionRegistry.game_started(
       ChatSessionRegistry,
-      socket.assigns.client_code,
+      socket.assigns.client_uuid,
       player_codes
     )
 
@@ -38,7 +43,7 @@ defmodule SlippiChat.ClientChannel do
   end
 
   def handle_in("game_ended", _params, socket) do
-    ChatSessionRegistry.game_ended(ChatSessionRegistry, socket.assigns.client_code)
+    ChatSessionRegistry.game_ended(ChatSessionRegistry, socket.assigns.client_uuid)
     {:reply, :ok, socket}
   end
 

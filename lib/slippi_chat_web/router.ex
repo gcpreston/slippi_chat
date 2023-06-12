@@ -8,10 +8,20 @@ defmodule SlippiChatWeb.Router do
     plug :put_root_layout, {SlippiChatWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    # plug :ensure_auth
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  def ensure_auth(conn, opts) do
+    IO.puts("in ensure_auth, opts #{inspect(opts)}")
+    val = get_session(conn, :my_cookie)
+    IO.puts("got from session #{inspect(val)}")
+
+    # put_resp_cookie(conn, "my_cookie", "hello world")
+    conn
   end
 
   scope "/", SlippiChatWeb do
