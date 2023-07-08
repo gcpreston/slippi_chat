@@ -14,6 +14,8 @@ defmodule SlippiChat.Application do
       SlippiChat.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: SlippiChat.PubSub},
+      # Start Presence
+      SlippiChatWeb.Presence,
       # Start Finch
       {Finch, name: SlippiChat.Finch},
       # Start the Endpoint (http/https)

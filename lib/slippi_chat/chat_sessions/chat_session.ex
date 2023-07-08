@@ -18,7 +18,7 @@ defmodule SlippiChat.ChatSessions.ChatSession do
 
   def start_link(player_codes) do
     player_codes = standardize(player_codes)
-    GenServer.start_link(__MODULE__, player_codes, name: {:global, player_codes})
+    GenServer.start_link(__MODULE__, player_codes, name: {:global, {__MODULE__, player_codes}})
   end
 
   def get_player_codes(server) do

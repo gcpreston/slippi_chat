@@ -18,6 +18,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
     ~H"""
     <div>
       <.simple_form
+        id="message-form"
         for={@form}
         as={:message}
         phx-submit="save"

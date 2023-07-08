@@ -36,6 +36,16 @@ defmodule SlippiChat.ChatSessionRegistry do
     end
   end
 
+  @doc """
+  Lists all active chat sessions by player codes and pid.
+  """
+  @spec list_chat_sessions() :: [{[String.t()], pid()}]
+  def list_chat_sessions do
+    :global.registered_names()
+    |> Enum.filter(fn name -> match?({ChatSession, player_codes} when is_list(player_codes), name) end)
+    |> Enum.map(fn {ChatSession, player_codes} = name -> {player_codes, :global.whereis_name(name)} end)
+  end
+
   def start_chat_session(server, player_codes) do
     GenServer.call(server, {:start_chat_session, player_codes})
   end
@@ -64,6 +74,8 @@ defmodule SlippiChat.ChatSessionRegistry do
         Enum.each(player_codes, fn player_code ->
           :ets.insert(players_ets, {player_code, pid})
         end)
+
+        Logger.info("Chat session started for players #{inspect(player_codes)}")
 
         {:reply, {:ok, pid}, {players_ets, new_refs},
          {:continue, {:notify_subscribers, [:session, :start], {player_codes, pid}}}}
