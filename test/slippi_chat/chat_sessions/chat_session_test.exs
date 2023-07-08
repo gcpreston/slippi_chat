@@ -1,23 +1,24 @@
 defmodule SlippiChat.ChatSessionTest do
   use ExUnit.Case, async: true
 
-  alias SlippiChat.ChatSessionRegistry
+  alias SlippiChat.ChatSessions
   alias SlippiChat.ChatSessions.{ChatSession, Message}
 
-  @registry_name __MODULE__
+  defp chat_session_timeout_ms do
+    Application.fetch_env!(:slippi_chat, :chat_session_timeout_ms)
+  end
 
   setup do
-    start_supervised!({ChatSessionRegistry, name: @registry_name})
+    player_codes = ["ALIC#3", "BOB#1"]
+    pid = start_supervised!({ChatSession, player_codes})
 
-    :ok = ChatSessionRegistry.register_client(@registry_name, "ALIC#3")
-    :ok = ChatSessionRegistry.register_client(@registry_name, "BOB#1")
+    %{pid: pid, player_codes: player_codes}
+  end
 
-    :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1"])
-
-    {:ok, session_pid} =
-      ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
-
-    %{pid: session_pid}
+  describe "get_player_codes/1" do
+    test "gets player codes of the chat session", %{pid: pid, player_codes: player_codes} do
+      assert ChatSession.get_player_codes(pid) == player_codes
+    end
   end
 
   describe "list_messages/1" do
@@ -41,9 +42,9 @@ defmodule SlippiChat.ChatSessionTest do
   end
 
   describe "send_message/2" do
-    test "sends a message to the session", %{pid: pid} do
-      {:ok, uuid} = ChatSession.get_uuid(pid)
-      Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:#{uuid}")
+    test "sends a message to the session", %{pid: pid, player_codes: player_codes} do
+      topic = ChatSessions.chat_session_topic(player_codes)
+      Phoenix.PubSub.subscribe(SlippiChat.PubSub, topic)
 
       assert ChatSession.list_messages(pid) == []
 
@@ -53,6 +54,30 @@ defmodule SlippiChat.ChatSessionTest do
       assert ChatSession.list_messages(pid) == [message]
 
       assert_receive {[:session, :message], ^message}
+    end
+  end
+
+  describe "reset_timeout/1" do
+    test "chat session terminates after inactivity timeout", %{pid: pid} do
+      assert Process.alive?(pid)
+
+      Process.sleep(chat_session_timeout_ms() + 10)
+
+      refute Process.alive?(pid)
+    end
+
+    test "resets chat session inactivity timeout", %{pid: pid} do
+      assert Process.alive?(pid)
+
+      Process.sleep(div(chat_session_timeout_ms(), 2))
+      ChatSession.reset_timeout(pid)
+      Process.sleep(div(chat_session_timeout_ms(), 2))
+
+      assert Process.alive?(pid)
+
+      Process.sleep(div(chat_session_timeout_ms(), 2))
+
+      refute Process.alive?(pid)
     end
   end
 
