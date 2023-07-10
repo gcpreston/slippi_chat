@@ -1,4 +1,4 @@
-defmodule SlippiChat.ClientChannel do
+defmodule SlippiChatWeb.ClientChannel do
   use Phoenix.Channel
 
   alias SlippiChat.ChatSessionRegistry

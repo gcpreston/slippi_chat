@@ -13,7 +13,7 @@ defmodule SlippiChatWeb.Endpoint do
 
   socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
-  socket "/socket", SlippiChat.UserSocket,
+  socket "/socket", SlippiChatWeb.UserSocket,
     websocket: true,
     longpoll: false
 
