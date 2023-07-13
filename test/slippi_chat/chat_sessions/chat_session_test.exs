@@ -2,7 +2,7 @@ defmodule SlippiChat.ChatSessionTest do
   use ExUnit.Case, async: true
 
   alias SlippiChat.ChatSessions
-  alias SlippiChat.ChatSessions.{ChatSession, Message}
+  alias SlippiChat.ChatSessions.ChatSession
 
   defp chat_session_timeout_ms do
     Application.fetch_env!(:slippi_chat, :chat_session_timeout_ms)
@@ -25,17 +25,11 @@ defmodule SlippiChat.ChatSessionTest do
     test "lists all messages of the chat session", %{pid: pid} do
       assert ChatSession.list_messages(pid) == []
 
-      msg1 = Message.new("message1", "ALIC#3")
-      msg2 = Message.new("message2", "BOB#1")
-      msg3 = Message.new("message3", "ALIC#3")
-      msg4 = Message.new("message4", "TEST#123")
-      msg5 = Message.new("message5", "TEST#123")
-
-      ChatSession.send_message(pid, msg1)
-      ChatSession.send_message(pid, msg2)
-      ChatSession.send_message(pid, msg3)
-      ChatSession.send_message(pid, msg4)
-      ChatSession.send_message(pid, msg5)
+      {:ok, msg1} = ChatSession.send_message(pid, "ALIC#3", "message1")
+      {:ok, msg2} = ChatSession.send_message(pid, "BOB#1", "message2")
+      {:ok, msg3} = ChatSession.send_message(pid, "ALIC#3", "message3")
+      {:ok, msg4} = ChatSession.send_message(pid, "TEST#123", "message4")
+      {:ok, msg5} = ChatSession.send_message(pid, "TEST#123", "message5")
 
       assert ChatSession.list_messages(pid) == [msg5, msg4, msg3, msg2, msg1]
     end
@@ -48,11 +42,9 @@ defmodule SlippiChat.ChatSessionTest do
 
       assert ChatSession.list_messages(pid) == []
 
-      message = Message.new("test message", "ALIC#3")
-      ChatSession.send_message(pid, message)
+      {:ok, message} = ChatSession.send_message(pid, "ALIC#3", "test message")
 
       assert ChatSession.list_messages(pid) == [message]
-
       assert_receive {[:session, :message], ^message}
     end
   end

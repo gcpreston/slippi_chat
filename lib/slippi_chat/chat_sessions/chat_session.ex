@@ -7,6 +7,7 @@ defmodule SlippiChat.ChatSessions.ChatSession do
   require Logger
 
   alias SlippiChat.ChatSessions
+  alias SlippiChat.ChatSessions.Message
 
   # TODO: More session end conditions
   # - send event on slippi quit out, quit when last player disconnects
@@ -25,8 +26,8 @@ defmodule SlippiChat.ChatSessions.ChatSession do
     GenServer.call(server, :get_player_codes)
   end
 
-  def send_message(server, message) do
-    GenServer.call(server, {:send_message, message})
+  def send_message(server, sender, content) do
+    GenServer.call(server, {:send_message, sender, content})
   end
 
   def list_messages(server) do
@@ -49,7 +50,8 @@ defmodule SlippiChat.ChatSessions.ChatSession do
   end
 
   @impl true
-  def handle_call({:send_message, new_message}, _from, state) do
+  def handle_call({:send_message, sender, content}, _from, state) do
+    new_message = Message.new(sender, content)
     {:reply, {:ok, new_message}, %{state | messages: [new_message | state.messages]} |> set_timeout(),
      {:continue, {:notify_subscribers, [:session, :message], new_message}}}
   end

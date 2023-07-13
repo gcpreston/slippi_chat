@@ -68,7 +68,7 @@ defmodule SlippiChatWeb.ClientChannelTest do
       assert_push "session_start", ^player_codes
 
       {:ok, pid} = ChatSessionRegistry.lookup(ChatSessionRegistry, client_code)
-      ChatSession.send_message(pid, Message.new("test message", client_code))
+      ChatSession.send_message(pid, client_code, "test message")
       assert_push "session_message", %Message{content: "test message", sender: ^client_code}
     end
   end

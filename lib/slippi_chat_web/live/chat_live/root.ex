@@ -2,7 +2,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
   use SlippiChatWeb, :live_view
 
   alias SlippiChat.{ChatSessions, ChatSessionRegistry}
-  alias SlippiChat.ChatSessions.{ChatSession, Message}
+  alias SlippiChat.ChatSessions.ChatSession
   alias SlippiChatWeb.{Endpoint, Presence}
 
   @impl true
@@ -95,8 +95,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
   @impl true
   def handle_event("send_message", %{"content" => content}, socket) do
-    message = Message.new(content, socket.assigns.player_code)
-    ChatSession.send_message(socket.assigns.chat_session_pid, message)
+    ChatSession.send_message(socket.assigns.chat_session_pid, socket.assigns.player_code, content)
     {:noreply, socket}
   end
 
