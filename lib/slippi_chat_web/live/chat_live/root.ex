@@ -5,6 +5,10 @@ defmodule SlippiChatWeb.ChatLive.Root do
   alias SlippiChat.ChatSessions.ChatSession
   alias SlippiChatWeb.{Endpoint, Presence}
 
+  defp chat_session_registry do
+    Application.fetch_env!(:slippi_chat, :chat_session_registry)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -64,7 +68,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
     end
 
     socket =
-      with {:ok, pid} when is_pid(pid) <- ChatSessionRegistry.lookup(ChatSessionRegistry, player_code),
+      with {:ok, pid} when is_pid(pid) <- ChatSessionRegistry.lookup(chat_session_registry(), player_code),
           player_codes when is_list(player_codes) <- ChatSession.get_player_codes(pid)
       do
         messages = ChatSession.list_messages(pid)

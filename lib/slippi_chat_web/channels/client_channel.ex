@@ -5,6 +5,10 @@ defmodule SlippiChatWeb.ClientChannel do
   alias SlippiChat.ChatSessions.ChatSession
   alias SlippiChatWeb.{Endpoint, Presence}
 
+  defp chat_session_registry do
+    Application.fetch_env!(:slippi_chat, :chat_session_registry)
+  end
+
   @impl true
   def join("clients", payload, socket) do
     if authorized?(payload) do
@@ -14,7 +18,7 @@ defmodule SlippiChatWeb.ClientChannel do
       Presence.track(socket, client_code, %{})
 
       socket =
-        case ChatSessionRegistry.lookup(ChatSessionRegistry, client_code) do
+        case ChatSessionRegistry.lookup(chat_session_registry(), client_code) do
           {:ok, pid} ->
             player_codes = ChatSession.get_player_codes(pid)
 
@@ -43,8 +47,8 @@ defmodule SlippiChatWeb.ClientChannel do
   @impl true
   def handle_in("game_started", %{"players" => player_codes}, socket)
       when is_list(player_codes) do
-    case ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes) do
-      {:already_started, pid} ->
+    case ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes) do
+      {:already_started, _pid} ->
         {:reply, :ok, socket}
 
       {:ok, pid} ->

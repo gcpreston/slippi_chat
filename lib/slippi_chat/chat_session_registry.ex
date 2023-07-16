@@ -21,7 +21,8 @@ defmodule SlippiChat.ChatSessionRegistry do
   """
   def start_link(opts) do
     server_name = Keyword.fetch!(opts, :name)
-    GenServer.start_link(__MODULE__, server_name, opts)
+    supervisor = Keyword.get(opts, :supervisor, SlippiChat.ChatSessionSupervisor)
+    GenServer.start_link(__MODULE__, {server_name, supervisor}, name: server_name)
   end
 
   @doc """
@@ -53,15 +54,15 @@ defmodule SlippiChat.ChatSessionRegistry do
   ## Callbacks
 
   @impl true
-  def init(table_name) do
+  def init({table_name, supervisor}) do
     players_ets = :ets.new(table_name, [:named_table, read_concurrency: true])
     refs = %{}
-    {:ok, {players_ets, refs}}
+    {:ok, {supervisor, players_ets, refs}}
   end
 
   @impl true
-  def handle_call({:start_chat_session, player_codes}, _from, {players_ets, refs} = state) do
-    case DynamicSupervisor.start_child(SlippiChat.ChatSessionSupervisor, {ChatSession, player_codes}) do
+  def handle_call({:start_chat_session, player_codes}, _from, {supervisor, players_ets, refs} = state) do
+    case DynamicSupervisor.start_child(supervisor, {ChatSession, player_codes}) do
       {:error, {:already_started, pid}} ->
         {:reply, {:already_started, pid}, state}
 
@@ -77,7 +78,7 @@ defmodule SlippiChat.ChatSessionRegistry do
 
         Logger.info("Chat session started for players #{inspect(player_codes)}")
 
-        {:reply, {:ok, pid}, {players_ets, new_refs},
+        {:reply, {:ok, pid}, {supervisor, players_ets, new_refs},
          {:continue, {:notify_subscribers, [:session, :start], {player_codes, pid}}}}
     end
   end
@@ -93,7 +94,7 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @impl true
-  def handle_info({:DOWN, ref, :process, down_pid, reason}, {players_ets, refs}) do
+  def handle_info({:DOWN, ref, :process, down_pid, reason}, {supervisor, players_ets, refs}) do
     {player_codes, refs} = Map.pop(refs, ref)
     Logger.info("Registry got DOWN, player codes: #{inspect(player_codes)}, reason: #{inspect(reason)}")
 
@@ -105,7 +106,7 @@ defmodule SlippiChat.ChatSessionRegistry do
       end
     end)
 
-    {:noreply, {players_ets, refs},
+    {:noreply, {supervisor, players_ets, refs},
      {:continue, {:notify_subscribers, [:session, :end], {player_codes, down_pid}}}}
   end
 

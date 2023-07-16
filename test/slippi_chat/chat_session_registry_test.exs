@@ -7,7 +7,8 @@ defmodule SlippiChat.ChatSessionRegistryTest do
   @registry_name __MODULE__
 
   setup do
-    pid = start_supervised!({ChatSessionRegistry, name: @registry_name})
+    {:ok, supervisor_pid} = DynamicSupervisor.start_link(strategy: :one_for_one)
+    pid = start_supervised!({ChatSessionRegistry, name: @registry_name, supervisor: supervisor_pid})
     %{pid: pid}
   end
 
@@ -21,8 +22,8 @@ defmodule SlippiChat.ChatSessionRegistryTest do
       {:ok, session_pid} = ChatSessionRegistry.start_chat_session(registry_pid, player_codes)
 
       assert ChatSession.get_player_codes(session_pid) == player_codes
-      assert_receive {[:session, :start], {^player_codes, pid}}
-      assert_receive {[:session, :start], {^player_codes, pid}}
+      assert_receive {[:session, :start], {^player_codes, ^session_pid}}
+      assert_receive {[:session, :start], {^player_codes, ^session_pid}}
     end
 
     test "doesn't start multiple sessions with the same players", %{pid: registry_pid} do

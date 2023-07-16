@@ -15,6 +15,20 @@ defmodule SlippiChatWeb.GameLive.RootTest do
     Application.fetch_env!(:slippi_chat, :chat_session_timeout_ms)
   end
 
+  defp chat_session_registry do
+    Application.fetch_env!(:slippi_chat, :chat_session_registry)
+  end
+
+  setup do
+    # Setup registry
+    {:ok, supervisor_pid} = DynamicSupervisor.start_link(strategy: :one_for_one)
+    registry_name = TestRegistry
+    start_supervised!({ChatSessionRegistry, name: registry_name, supervisor: supervisor_pid})
+    Application.put_env(:slippi_chat, :chat_session_registry, TestRegistry)
+
+    %{registry_name: registry_name}
+  end
+
   describe "Show" do
     ## Rendering
 
@@ -27,7 +41,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
     test "renders chat session and its data when one exists", %{conn: conn} do
       player_codes = ["ABC#123", "XYZ#987"]
-      {:ok, pid} = ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes)
+      {:ok, pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, message} = ChatSession.send_message(pid, "XYZ#987", "hello world!")
       {:ok, _lv, html} = live(conn, ~p"/chat/abc-123")
 
@@ -41,7 +55,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
     test "sends messages", %{conn: conn1} do
       player_codes = ["ABC#123", "XYZ#987"]
-      ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes)
+      ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
 
       conn2 = Phoenix.ConnTest.build_conn()
       {:ok, lv1, _html1} = live(conn1, ~p"/chat/abc-123")
@@ -60,7 +74,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       # No refresh
 
-      {:ok, _pid} = ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes)
+      {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
       assert html =~ "Chat session players:"
       Process.sleep(chat_session_timeout_ms())
@@ -68,7 +82,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       # Refresh
 
-      {:ok, _pid} = ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes)
+      {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
       assert html =~ "Chat session players:"
       Process.sleep(div(chat_session_timeout_ms(), 2))
@@ -85,7 +99,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
     test "displays online status of client for each player code", %{conn: conn1} do
       player_codes = ["ABC#123", "XYZ#987"]
-      ChatSessionRegistry.start_chat_session(ChatSessionRegistry, player_codes)
+      ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       Endpoint.subscribe("clients")
 
       conn2 = Phoenix.ConnTest.build_conn()

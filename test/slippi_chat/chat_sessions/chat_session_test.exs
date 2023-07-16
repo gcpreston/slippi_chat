@@ -1,5 +1,5 @@
 defmodule SlippiChat.ChatSessionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias SlippiChat.ChatSessions
   alias SlippiChat.ChatSessions.ChatSession
