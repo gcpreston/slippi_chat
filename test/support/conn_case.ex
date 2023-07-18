@@ -33,11 +33,7 @@ defmodule SlippiChatWeb.ConnCase do
 
   setup tags do
     SlippiChat.DataCase.setup_sandbox(tags)
-
-    # Shut down chat sessions
-    for {player_codes, pid} <- SlippiChat.ChatSessionRegistry.list_chat_sessions() do
-      GenServer.stop(pid)
-    end
+    SlippiChat.Injections.set_chat_session_registry(tags.test)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

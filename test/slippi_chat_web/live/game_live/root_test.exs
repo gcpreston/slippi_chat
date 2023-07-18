@@ -1,7 +1,5 @@
 defmodule SlippiChatWeb.GameLive.RootTest do
-  use SlippiChatWeb.ConnCase, async: false
-  # TODO: Inject ChatSessionRegistry name to LV, use one named
-  #        after the test file, and async true
+  use SlippiChatWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Phoenix.ChannelTest
@@ -17,16 +15,6 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
   defp chat_session_registry do
     Application.fetch_env!(:slippi_chat, :chat_session_registry)
-  end
-
-  setup do
-    # Setup registry
-    {:ok, supervisor_pid} = DynamicSupervisor.start_link(strategy: :one_for_one)
-    registry_name = TestRegistry
-    start_supervised!({ChatSessionRegistry, name: registry_name, supervisor: supervisor_pid})
-    Application.put_env(:slippi_chat, :chat_session_registry, TestRegistry)
-
-    %{registry_name: registry_name}
   end
 
   describe "Show" do

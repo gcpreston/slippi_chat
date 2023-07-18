@@ -30,6 +30,8 @@ defmodule SlippiChatWeb.ChannelCase do
 
   setup tags do
     SlippiChat.DataCase.setup_sandbox(tags)
+    SlippiChat.Injections.set_chat_session_registry(tags.test)
+
     :ok
   end
 end
