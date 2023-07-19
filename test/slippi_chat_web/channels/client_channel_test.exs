@@ -56,7 +56,7 @@ defmodule SlippiChatWeb.ClientChannelTest do
   end
 
   describe "PubSub messages" do
-    test "on session end, pushes to channel", %{socket: socket, client_code: client_code}  do
+    test "on session end, pushes to channel", %{socket: socket, client_code: client_code} do
       player_codes = [client_code, "XYZ#999"]
       push(socket, "game_started", %{"players" => player_codes})
 
@@ -65,7 +65,7 @@ defmodule SlippiChatWeb.ClientChannelTest do
       assert_push "session_end", ^player_codes
     end
 
-    test "on chat session message, pushes to socket", %{socket: socket, client_code: client_code}  do
+    test "on chat session message, pushes to socket", %{socket: socket, client_code: client_code} do
       player_codes = [client_code, "XYZ#999"]
 
       push(socket, "game_started", %{"players" => player_codes})

@@ -43,8 +43,12 @@ defmodule SlippiChat.ChatSessionRegistry do
   @spec list_chat_sessions() :: [{[String.t()], pid()}]
   def list_chat_sessions do
     :global.registered_names()
-    |> Enum.filter(fn name -> match?({ChatSession, player_codes} when is_list(player_codes), name) end)
-    |> Enum.map(fn {ChatSession, player_codes} = name -> {player_codes, :global.whereis_name(name)} end)
+    |> Enum.filter(fn name ->
+      match?({ChatSession, player_codes} when is_list(player_codes), name)
+    end)
+    |> Enum.map(fn {ChatSession, player_codes} = name ->
+      {player_codes, :global.whereis_name(name)}
+    end)
   end
 
   def start_chat_session(server, player_codes) do
@@ -61,7 +65,11 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   @impl true
-  def handle_call({:start_chat_session, player_codes}, _from, {supervisor, players_ets, refs} = state) do
+  def handle_call(
+        {:start_chat_session, player_codes},
+        _from,
+        {supervisor, players_ets, refs} = state
+      ) do
     case DynamicSupervisor.start_child(supervisor, {ChatSession, player_codes}) do
       {:error, {:already_started, pid}} ->
         {:reply, {:already_started, pid}, state}
@@ -84,7 +92,7 @@ defmodule SlippiChat.ChatSessionRegistry do
   end
 
   defp end_existing_sessions(players_ets, player_codes) when is_list(player_codes) do
-    Enum.each(player_codes, &(end_existing_session(players_ets, &1)))
+    Enum.each(player_codes, &end_existing_session(players_ets, &1))
   end
 
   defp end_existing_session(players_ets, player_code) when is_binary(player_code) do
@@ -96,7 +104,10 @@ defmodule SlippiChat.ChatSessionRegistry do
   @impl true
   def handle_info({:DOWN, ref, :process, down_pid, reason}, {supervisor, players_ets, refs}) do
     {player_codes, refs} = Map.pop(refs, ref)
-    Logger.info("Registry got DOWN, player codes: #{inspect(player_codes)}, reason: #{inspect(reason)}")
+
+    Logger.info(
+      "Registry got DOWN, player codes: #{inspect(player_codes)}, reason: #{inspect(reason)}"
+    )
 
     Enum.each(player_codes, fn player_code ->
       with {:ok, result_pid} <- lookup(players_ets, player_code) do

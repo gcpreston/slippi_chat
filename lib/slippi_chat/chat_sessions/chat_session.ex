@@ -52,7 +52,9 @@ defmodule SlippiChat.ChatSessions.ChatSession do
   @impl true
   def handle_call({:send_message, sender, content}, _from, state) do
     new_message = Message.new(sender, content)
-    {:reply, {:ok, new_message}, %{state | messages: [new_message | state.messages]} |> set_timeout(),
+
+    {:reply, {:ok, new_message},
+     %{state | messages: [new_message | state.messages]} |> set_timeout(),
      {:continue, {:notify_subscribers, [:session, :message], new_message}}}
   end
 

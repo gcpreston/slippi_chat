@@ -68,9 +68,9 @@ defmodule SlippiChatWeb.ChatLive.Root do
     end
 
     socket =
-      with {:ok, pid} when is_pid(pid) <- ChatSessionRegistry.lookup(chat_session_registry(), player_code),
-          player_codes when is_list(player_codes) <- ChatSession.get_player_codes(pid)
-      do
+      with {:ok, pid} when is_pid(pid) <-
+             ChatSessionRegistry.lookup(chat_session_registry(), player_code),
+           player_codes when is_list(player_codes) <- ChatSession.get_player_codes(pid) do
         messages = ChatSession.list_messages(pid)
         online_codes = online_players(player_codes)
         chat_session_topic = ChatSessions.chat_session_topic(player_codes)
@@ -141,7 +141,10 @@ defmodule SlippiChatWeb.ChatLive.Root do
   end
 
   # TODO: Create connect/disconnect events via handle_metas rather than fetching from presence here
-  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff", topic: "clients", payload: _payload}, socket) do
+  def handle_info(
+        %Phoenix.Socket.Broadcast{event: "presence_diff", topic: "clients", payload: _payload},
+        socket
+      ) do
     if socket.assigns.chat_session_pid do
       {:noreply, socket |> assign(:online_codes, online_players(socket.assigns.player_codes))}
     else

@@ -12,8 +12,11 @@ defmodule SlippiChat.ChatSessionsTest do
 
   describe "chat_session_topic/1" do
     test "returns the pubsub topic for a list of players" do
-      assert ChatSessions.chat_session_topic(["DAN#432", "BILL#747"]) == "chat_sessions:BILL#747,DAN#432"
-      assert ChatSessions.chat_session_topic(["X#732", "bob#421", "x#123"]) == "chat_sessions:BOB#421,X#123,X#732"
+      assert ChatSessions.chat_session_topic(["DAN#432", "BILL#747"]) ==
+               "chat_sessions:BILL#747,DAN#432"
+
+      assert ChatSessions.chat_session_topic(["X#732", "bob#421", "x#123"]) ==
+               "chat_sessions:BOB#421,X#123,X#732"
     end
   end
 end
