@@ -13,7 +13,9 @@ defmodule SlippiChat.ChatSessionTest do
     :ok = ChatSessionRegistry.register_client(@registry_name, "BOB#1")
 
     :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1"])
-    {:ok, session_pid} = ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
+
+    {:ok, session_pid} =
+      ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
 
     %{pid: session_pid}
   end

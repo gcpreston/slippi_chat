@@ -82,10 +82,37 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
       Phoenix.PubSub.subscribe(SlippiChat.PubSub, "chat_sessions:ALIC#3")
 
-      :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"])
-      :ok = ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"])
-      :ok = ChatSessionRegistry.game_started(@registry_name, "CAT#2", ["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"])
-      {:ok, pid} = ChatSessionRegistry.game_started(@registry_name, "DAVE#4", ["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"])
+      :ok =
+        ChatSessionRegistry.game_started(@registry_name, "ALIC#3", [
+          "ALIC#3",
+          "BOB#1",
+          "CAT#2",
+          "DAVE#4"
+        ])
+
+      :ok =
+        ChatSessionRegistry.game_started(@registry_name, "BOB#1", [
+          "ALIC#3",
+          "BOB#1",
+          "CAT#2",
+          "DAVE#4"
+        ])
+
+      :ok =
+        ChatSessionRegistry.game_started(@registry_name, "CAT#2", [
+          "ALIC#3",
+          "BOB#1",
+          "CAT#2",
+          "DAVE#4"
+        ])
+
+      {:ok, pid} =
+        ChatSessionRegistry.game_started(@registry_name, "DAVE#4", [
+          "ALIC#3",
+          "BOB#1",
+          "CAT#2",
+          "DAVE#4"
+        ])
 
       assert_receive {[:session, :start], {["ALIC#3", "BOB#1", "CAT#2", "DAVE#4"], ^pid}}
 
@@ -114,10 +141,13 @@ defmodule SlippiChat.ChatSessionRegistryTest do
 
       # Session between CAT#2 and DAVE#4
       :ok = ChatSessionRegistry.game_started(@registry_name, "CAT#2", ["CAT#2", "DAVE#4"])
-      {:ok, pid2} = ChatSessionRegistry.game_started(@registry_name, "DAVE#4", ["CAT#2", "DAVE#4"])
+
+      {:ok, pid2} =
+        ChatSessionRegistry.game_started(@registry_name, "DAVE#4", ["CAT#2", "DAVE#4"])
 
       # Game start between EVE#5, ALIC#3, and CAT#2
-      :ok = ChatSessionRegistry.game_started(@registry_name, "EVE#5", ["ALIC#3", "CAT#2", "EVE#5"])
+      :ok =
+        ChatSessionRegistry.game_started(@registry_name, "EVE#5", ["ALIC#3", "CAT#2", "EVE#5"])
 
       # Old sessions for ALIC#3 and CAT#2 are stopped
       assert_receive {[:session, :end], {["ALIC#3", "BOB#1"], ^pid1}}
@@ -146,7 +176,8 @@ defmodule SlippiChat.ChatSessionRegistryTest do
       {:ok, pid} = ChatSessionRegistry.game_started(@registry_name, "BOB#1", ["ALIC#3", "BOB#1"])
 
       # Game start between EVE#5, ALIC#3, and BOB#1
-      :ok = ChatSessionRegistry.game_started(@registry_name, "EVE#5", ["ALIC#3", "BOB#1", "EVE#5"])
+      :ok =
+        ChatSessionRegistry.game_started(@registry_name, "EVE#5", ["ALIC#3", "BOB#1", "EVE#5"])
 
       # Old session for ALIC#3 and BOB#1 is stopped
       assert_receive {[:session, :end], {["ALIC#3", "BOB#1"], ^pid}}
@@ -163,7 +194,9 @@ defmodule SlippiChat.ChatSessionRegistryTest do
       ChatSessionRegistry.register_client(@registry_name, "ALIC#3")
 
       :ok = ChatSessionRegistry.game_started(@registry_name, "ALIC#3", ["ALIC#3", "BOB#1"])
-      {:ok, %{current_game: ["ALIC#3", "BOB#1"]}} = ChatSessionRegistry.lookup(@registry_name, "ALIC#3")
+
+      {:ok, %{current_game: ["ALIC#3", "BOB#1"]}} =
+        ChatSessionRegistry.lookup(@registry_name, "ALIC#3")
 
       :ok = ChatSessionRegistry.game_ended(@registry_name, "ALIC#3")
       {:ok, %{current_game: nil}} = ChatSessionRegistry.lookup(@registry_name, "ALIC#3")
