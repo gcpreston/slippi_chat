@@ -1,9 +1,9 @@
-defmodule SlippiChatWeb.ConnCase do
+defmodule SlippiChatWeb.ChannelCase do
   @moduledoc """
   This module defines the test case to be used by
-  tests that require setting up a connection.
+  channel tests.
 
-  Such tests rely on `Phoenix.ConnTest` and also
+  Such tests rely on `Phoenix.ChannelTest` and also
   import other functionality to make it easier
   to build common data structures and query the data layer.
 
@@ -11,7 +11,7 @@ defmodule SlippiChatWeb.ConnCase do
   we enable the SQL sandbox, so changes done to the database
   are reverted at the end of every test. If you are using
   PostgreSQL, you can even run database tests asynchronously
-  by setting `use SlippiChatWeb.ConnCase, async: true`, although
+  by setting `use SlippiChatWeb.ChannelCase, async: true`, although
   this option is not recommended for other databases.
   """
 
@@ -19,15 +19,12 @@ defmodule SlippiChatWeb.ConnCase do
 
   using do
     quote do
+      # Import conveniences for testing with channels
+      import Phoenix.ChannelTest
+      import SlippiChatWeb.ChannelCase
+
       # The default endpoint for testing
       @endpoint SlippiChatWeb.Endpoint
-
-      use SlippiChatWeb, :verified_routes
-
-      # Import conveniences for testing with connections
-      import Plug.Conn
-      import Phoenix.ConnTest
-      import SlippiChatWeb.ConnCase
     end
   end
 
@@ -35,6 +32,6 @@ defmodule SlippiChatWeb.ConnCase do
     SlippiChat.DataCase.setup_sandbox(tags)
     SlippiChat.Injections.set_chat_session_registry(tags.test)
 
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    :ok
   end
 end

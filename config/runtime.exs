@@ -63,6 +63,9 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
+  config :slippi_chat, :chat_session_timeout_ms, :timer.minutes(15)
+  config :slippi_chat, :chat_session_registry, SlippiChat.ChatSessionRegistry
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key

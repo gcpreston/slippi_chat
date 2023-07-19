@@ -23,6 +23,8 @@ config :slippi_chat, SlippiChatWeb.Endpoint,
 # In test we don't send emails.
 config :slippi_chat, SlippiChat.Mailer, adapter: Swoosh.Adapters.Test
 
+config :slippi_chat, :chat_session_timeout_ms, 150
+
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 

@@ -1,8 +1,8 @@
-defmodule SlippiChat.UserSocket do
+defmodule SlippiChatWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "players:*", SlippiChat.PlayerChannel
+  channel "clients", SlippiChatWeb.ClientChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

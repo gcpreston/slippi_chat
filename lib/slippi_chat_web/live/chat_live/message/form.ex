@@ -3,7 +3,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
 
   import SlippiChatWeb.CoreComponents
 
-  alias SlippiChat.ChatSessions.{ChatSession, Message}
+  alias SlippiChat.ChatSessions.ChatSession
 
   def update(assigns, socket) do
     changeset = change_message(%{})
@@ -18,6 +18,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
     ~H"""
     <div>
       <.simple_form
+        id="message-form"
         for={@form}
         as={:message}
         phx-submit="save"
@@ -38,8 +39,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
   end
 
   def handle_event("save", %{"message" => %{"content" => content}}, socket) do
-    message = Message.new(content, socket.assigns.sender)
-    ChatSession.send_message(socket.assigns.chat_session_pid, message)
+    ChatSession.send_message(socket.assigns.chat_session_pid, socket.assigns.sender, content)
     empty_changeset = change_message(%{})
 
     {:noreply, socket |> assign_form(empty_changeset)}
