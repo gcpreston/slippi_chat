@@ -99,24 +99,28 @@ defmodule SlippiChatWeb.GameLive.RootTest do
         refute html =~ "XYZ#987 (online)"
       end)
 
+      code_abc = "ABC#123"
+
       {:ok, _reply, socket_abc} =
         UserSocket
-        |> socket()
-        |> subscribe_and_join(ClientChannel, "clients", %{"client_code" => "ABC#123"})
+        |> socket("user_socket:#{code_abc}", %{client_code: code_abc})
+        |> subscribe_and_join(ClientChannel, "clients")
 
-      assert_broadcast "presence_diff", %{joins: %{"ABC#123" => _}}
+      assert_broadcast "presence_diff", %{joins: %{^code_abc => _}}
 
       Enum.each([render(lv1), render(lv2)], fn html ->
         assert html =~ "ABC#123 (online)"
         refute html =~ "XYZ#987 (online)"
       end)
 
+      code_xyz = "XYZ#987"
+
       {:ok, _reply, _socket_xyz} =
         UserSocket
-        |> socket()
-        |> subscribe_and_join(ClientChannel, "clients", %{"client_code" => "XYZ#987"})
+        |> socket(code_xyz, %{client_code: code_xyz})
+        |> subscribe_and_join(ClientChannel, "clients")
 
-      assert_broadcast "presence_diff", %{joins: %{"XYZ#987" => _}}
+      assert_broadcast "presence_diff", %{joins: %{^code_xyz => _}}
 
       Enum.each([render(lv1), render(lv2)], fn html ->
         assert html =~ "ABC#123 (online)"

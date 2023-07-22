@@ -14,13 +14,12 @@ defmodule SlippiChatWeb.ClientChannelTest do
   end
 
   setup do
-    # TODO: Authorize socket on connection rather than channel join
     client_code = "ABC#123"
 
     {:ok, _reply, socket} =
       UserSocket
-      |> socket()
-      |> subscribe_and_join(ClientChannel, "clients", %{"client_code" => client_code})
+      |> socket("user_socket:#{client_code}", %{client_code: client_code})
+      |> subscribe_and_join(ClientChannel, "clients")
 
     %{client_code: client_code, socket: socket}
   end
@@ -31,8 +30,8 @@ defmodule SlippiChatWeb.ClientChannelTest do
 
       {:ok, _reply, _socket2} =
         UserSocket
-        |> socket()
-        |> subscribe_and_join(ClientChannel, "clients", %{"client_code" => "DEF#456"})
+        |> socket("user_socket:DEF#456", %{client_code: "DEF#456"})
+        |> subscribe_and_join(ClientChannel, "clients")
 
       assert Presence.list("clients") |> Map.keys() == ["ABC#123", "DEF#456"]
 

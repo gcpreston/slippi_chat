@@ -20,6 +20,13 @@ if System.get_env("PHX_SERVER") do
   config :slippi_chat, SlippiChatWeb.Endpoint, server: true
 end
 
+config :slippi_chat, :chat_session_registry, SlippiChat.ChatSessionRegistry
+config :slippi_chat, :chat_session_timeout_ms, :timer.minutes(15)
+
+if config_env() == :test do
+  config :slippi_chat, :chat_session_timeout_ms, 150
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -62,9 +69,6 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base
-
-  config :slippi_chat, :chat_session_timeout_ms, :timer.minutes(15)
-  config :slippi_chat, :chat_session_registry, SlippiChat.ChatSessionRegistry
 
   # ## SSL Support
   #

@@ -16,8 +16,20 @@ defmodule SlippiChatWeb.UserSocket do
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
   @impl true
-  def connect(_params, socket, _connect_info) do
-    {:ok, socket}
+  def connect(params, socket) do
+    with {:ok, client_code} <- get_client_code(params) do
+      {:ok, assign(socket, :client_code, client_code)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp get_client_code(params) do
+    if Map.has_key?(params, "client_code") && is_binary(params["client_code"]) do
+      {:ok, params["client_code"]}
+    else
+      :error
+    end
   end
 
   # Socket id's are topics that allow you to identify all sockets for a given user:
@@ -31,5 +43,5 @@ defmodule SlippiChatWeb.UserSocket do
   #
   # Returning `nil` makes this socket anonymous.
   @impl true
-  def id(_socket), do: nil
+  def id(socket), do: "user_socket:#{socket.assigns.client_code}"
 end

@@ -10,9 +10,9 @@ defmodule SlippiChatWeb.ClientChannel do
   end
 
   @impl true
-  def join("clients", payload, socket) do
-    if authorized?(payload) do
-      client_code = payload["client_code"]
+  def join("clients", _payload, socket) do
+    if authorized?(socket) do
+      client_code = socket.assigns.client_code
       Endpoint.subscribe(ChatSessions.player_topic(client_code))
       # TODO: More refined client tracking so not every LV instance receives every join
       Presence.track(socket, client_code, %{})
@@ -40,8 +40,8 @@ defmodule SlippiChatWeb.ClientChannel do
     end
   end
 
-  defp authorized?(payload) do
-    Map.has_key?(payload, "client_code") && is_binary(payload["client_code"])
+  defp authorized?(socket) do
+    Map.has_key?(socket.assigns, :client_code) && is_binary(socket.assigns.client_code)
   end
 
   @impl true
