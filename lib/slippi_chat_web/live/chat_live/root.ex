@@ -34,11 +34,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
       <%= if @chat_session_pid do %>
         <h3>Chat</h3>
         <div id="chat-log" phx-update="stream">
-          <li
-            :for={{dom_id, message} <- Enum.reverse(@streams.messages)}
-            id={dom_id}
-            class="chat-message"
-          >
+          <li :for={{dom_id, message} <- @streams.messages} id={dom_id} class="chat-message">
             <%= message.sender %>: <%= message.content %>
           </li>
         </div>
@@ -71,7 +67,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
       with {:ok, pid} when is_pid(pid) <-
              ChatSessionRegistry.lookup(chat_session_registry(), player_code),
            player_codes when is_list(player_codes) <- ChatSession.get_player_codes(pid) do
-        messages = ChatSession.list_messages(pid)
+        messages = Enum.reverse(ChatSession.list_messages(pid))
         online_codes = online_players(player_codes)
         chat_session_topic = ChatSessions.chat_session_topic(player_codes)
 
