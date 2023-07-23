@@ -30,6 +30,9 @@ defmodule SlippiChat.ChatSessions.ChatSession do
     GenServer.call(server, {:send_message, sender, content})
   end
 
+  @doc """
+  Returns messages of the chat session in ascending order.
+  """
   def list_messages(server) do
     GenServer.call(server, :list_messages)
   end
