@@ -108,9 +108,11 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       assert_broadcast "presence_diff", %{joins: %{^code_abc => _}}
 
-      Enum.each([render(lv1), render(lv2)], fn html ->
-        assert html =~ "ABC#123 (online)"
-        refute html =~ "XYZ#987 (online)"
+      wait_until(fn ->
+        Enum.each([render(lv1), render(lv2)], fn html ->
+          assert html =~ "ABC#123 (online)"
+          refute html =~ "XYZ#987 (online)"
+        end)
       end)
 
       code_xyz = "XYZ#987"
@@ -122,18 +124,22 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       assert_broadcast "presence_diff", %{joins: %{^code_xyz => _}}
 
-      Enum.each([render(lv1), render(lv2)], fn html ->
-        assert html =~ "ABC#123 (online)"
-        assert html =~ "XYZ#987 (online)"
+      wait_until(fn ->
+        Enum.each([render(lv1), render(lv2)], fn html ->
+          assert html =~ "ABC#123 (online)"
+          assert html =~ "XYZ#987 (online)"
+        end)
       end)
 
       Process.unlink(socket_abc.channel_pid)
       close(socket_abc)
       assert_broadcast "presence_diff", %{leaves: %{"ABC#123" => _}}
 
-      Enum.each([render(lv1), render(lv2)], fn html ->
-        refute html =~ "ABC#123 (online)"
-        assert html =~ "XYZ#987 (online)"
+      wait_until(fn ->
+        Enum.each([render(lv1), render(lv2)], fn html ->
+          refute html =~ "ABC#123 (online)"
+          assert html =~ "XYZ#987 (online)"
+        end)
       end)
     end
   end

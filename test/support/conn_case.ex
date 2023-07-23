@@ -27,6 +27,7 @@ defmodule SlippiChatWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import SlippiChat.TimeHelper
       import SlippiChatWeb.ConnCase
     end
   end
