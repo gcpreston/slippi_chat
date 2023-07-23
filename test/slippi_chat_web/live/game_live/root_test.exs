@@ -142,5 +142,47 @@ defmodule SlippiChatWeb.GameLive.RootTest do
         end)
       end)
     end
+
+    test "reacts to chat session end", %{conn: conn} do
+      {:ok, pid} =
+        ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
+
+      {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
+
+      assert html =~ "Chat session players:"
+      assert html =~ "XYZ#987"
+
+      ChatSession.send_message(pid, "ABC#123", "test message")
+      wait_until(fn -> assert render(lv) =~ "test message" end)
+
+      ChatSession.end_session(pid)
+
+      wait_until(fn -> assert render(lv) =~ "No chat session in progress." end)
+      html = render(lv)
+      refute html =~ "XYZ#987"
+      refute html =~ "test message"
+    end
+
+    test "reacts to new chat session start", %{conn: conn} do
+      {:ok, pid} =
+        ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
+
+      {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
+
+      assert html =~ "Chat session players:"
+      assert html =~ "XYZ#987"
+
+      ChatSession.send_message(pid, "ABC#123", "test message")
+      wait_until(fn -> assert render(lv) =~ "test message" end)
+
+      {:ok, _new_pid} =
+        ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "DEF#456"])
+
+      wait_until(fn -> assert render(lv) =~ "DEF#456" end)
+      wait_until(fn -> refute render(lv) =~ "test message" end)
+      html = render(lv)
+      refute html =~ "XYZ#987"
+      refute html =~ "test message"
+    end
   end
 end
