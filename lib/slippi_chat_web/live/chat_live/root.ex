@@ -110,26 +110,37 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
   @impl true
   def handle_info({[:session, :start], {player_codes, pid}}, socket) do
+    if !!socket.assigns[:chat_session_topic] do
+      Endpoint.unsubscribe(socket.assigns.session_topic)
+    end
+
     topic = ChatSessions.chat_session_topic(player_codes)
     Endpoint.subscribe(topic)
+    messages = Enum.reverse(ChatSession.list_messages(pid))
 
     {:noreply,
      socket
      |> assign(:chat_session_pid, pid)
      |> assign(:player_codes, player_codes)
      |> assign(:online_codes, online_players(player_codes))
-     |> assign(:session_topic, topic)}
+     |> assign(:session_topic, topic)
+     |> stream(:messages, messages, reset: true)}
   end
 
-  def handle_info({[:session, :end], _result}, socket) do
-    Endpoint.unsubscribe(socket.assigns.session_topic)
+  def handle_info({[:session, :end], {_player_codes, pid}}, socket) do
+    if socket.assigns.chat_session_pid == pid do
+      Endpoint.unsubscribe(socket.assigns.session_topic)
 
-    {:noreply,
-     socket
-     |> assign(:chat_session_pid, nil)
-     |> assign(:player_codes, nil)
-     |> assign(:online_codes, [])
-     |> assign(:session_topic, nil)}
+      {:noreply,
+       socket
+       |> assign(:chat_session_pid, nil)
+       |> assign(:player_codes, nil)
+       |> assign(:online_codes, [])
+       |> assign(:session_topic, nil)
+       |> stream(:messages, [], reset: true)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_info({[:session, :message], new_message}, socket) do

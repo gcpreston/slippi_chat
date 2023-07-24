@@ -1,5 +1,5 @@
 defmodule SlippiChatWeb.ErrorHTMLTest do
-  use SlippiChatWeb.ConnCase, async: true
+  use SlippiChatWeb.ConnCase, async: false
 
   # Bring render_to_string/4 for testing custom views
   import Phoenix.Template
