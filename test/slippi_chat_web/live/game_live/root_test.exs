@@ -1,5 +1,5 @@
 defmodule SlippiChatWeb.GameLive.RootTest do
-  use SlippiChatWeb.ConnCase, async: true
+  use SlippiChatWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Phoenix.ChannelTest
