@@ -43,7 +43,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
     test "sends messages", %{conn: conn1} do
       player_codes = ["ABC#123", "XYZ#987"]
-      ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
+      {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
 
       conn2 = Phoenix.ConnTest.build_conn()
       {:ok, lv1, _html1} = live(conn1, ~p"/chat/abc-123")
@@ -87,7 +87,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
     test "displays online status of client for each player code", %{conn: conn1} do
       player_codes = ["ABC#123", "XYZ#987"]
-      ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
+      {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       Endpoint.subscribe("clients")
 
       conn2 = Phoenix.ConnTest.build_conn()
