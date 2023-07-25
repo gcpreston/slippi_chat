@@ -1,6 +1,9 @@
 defmodule SlippiChatWeb.UserSocket do
   use Phoenix.Socket
 
+  require Logger
+  alias SlippiChat.Auth
+
   ## Channels
   channel "clients", SlippiChatWeb.ClientChannel
 
@@ -17,18 +20,13 @@ defmodule SlippiChatWeb.UserSocket do
   # performing token verification on connect.
   @impl true
   def connect(params, socket) do
-    with {:ok, client_code} <- get_client_code(params) do
+    with token when not is_nil(token) <- params["client_token"],
+         client_code when not is_nil(client_code) <-
+           Auth.get_client_code_by_session_token(token) do
+      Logger.info("Socket connected for #{client_code}")
       {:ok, assign(socket, :client_code, client_code)}
     else
       _ -> :error
-    end
-  end
-
-  defp get_client_code(params) do
-    if Map.has_key?(params, "client_code") && is_binary(params["client_code"]) do
-      {:ok, params["client_code"]}
-    else
-      :error
     end
   end
 
@@ -39,7 +37,7 @@ defmodule SlippiChatWeb.UserSocket do
   # Would allow you to broadcast a "disconnect" event and terminate
   # all active sockets and channels for a given user:
   #
-  #     Webcandy2Web.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
+  #     SlippiChatWeb.Endpoint.broadcast("user_socket:#{user.id}", "disconnect", %{})
   #
   # Returning `nil` makes this socket anonymous.
   @impl true
