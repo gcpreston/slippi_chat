@@ -86,6 +86,10 @@ defmodule SlippiChatWeb.GameLive.RootTest do
     end
 
     test "displays online status of client for each player code", %{conn: conn1} do
+      old_timeout = chat_session_timeout_ms()
+      Application.put_env(:slippi_chat, :chat_session_timeout_ms, 1500)
+      on_exit(fn -> Application.put_env(:slippi_chat, :chat_session_timeout_ms, old_timeout) end)
+
       player_codes = ["ABC#123", "XYZ#987"]
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       Endpoint.subscribe("clients")
