@@ -38,4 +38,25 @@ defmodule SlippiChatWeb.ConnCase do
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  @doc """
+  Wait for a LiveView html-based assertion to pass.
+
+  Accepts a LiveView from Phoenix.LiveViewTest.live/2, and a function
+  of arity 1, which gets passed the rendered LiveView and does assertions
+  on the html. Returns the rendered html which passed the assertion.
+
+  ## Examples
+
+      iex> html = render_until(lv, fn html -> assert html =~ "Loading finished!" end)
+  """
+  def render_until(lv, fun) do
+    wrapped_fun = fn ->
+      html = Phoenix.LiveViewTest.render(lv)
+      fun.(html)
+      html
+    end
+
+    SlippiChat.TimeHelper.wait_until(wrapped_fun)
+  end
 end
