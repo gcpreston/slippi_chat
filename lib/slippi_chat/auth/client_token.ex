@@ -9,8 +9,6 @@ defmodule SlippiChat.Auth.ClientToken do
     field :client_code, :string
     field :token, :binary
     field :context, :string
-    field :granter_code, :string
-    field :granter_token, :binary
 
     timestamps(updated_at: false)
   end
@@ -23,7 +21,7 @@ defmodule SlippiChat.Auth.ClientToken do
   which means anyone with read-only access to the database cannot directly use
   the token in the application to gain access.
   """
-  def build_hashed_token(client_code, context, granter_code, granter_token) do
+  def build_hashed_token(client_code, context) do
     token = :crypto.strong_rand_bytes(@rand_size)
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
@@ -31,9 +29,7 @@ defmodule SlippiChat.Auth.ClientToken do
      %SlippiChat.Auth.ClientToken{
        token: hashed_token,
        context: context,
-       client_code: client_code,
-       granter_code: granter_code,
-       granter_token: granter_token
+       client_code: client_code
      }}
   end
 

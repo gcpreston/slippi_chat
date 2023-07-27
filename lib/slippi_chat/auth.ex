@@ -20,7 +20,7 @@ defmodule SlippiChat.Auth do
   def generate_granted_session_token(client_code, granter_token) do
     with {:ok, query} <- ClientToken.verify_hashed_token_query(granter_token, "session"),
          granter_code when not is_nil(granter_code) <- Repo.one(query) do
-      build_and_insert_token(client_code, granter_code, granter_token)
+      build_and_insert_session_token(client_code, granter_code)
     else
       _ -> :error
     end
@@ -30,14 +30,17 @@ defmodule SlippiChat.Auth do
   Generates a session token without a granter.
   """
   def generate_admin_session_token(client_code) do
-    build_and_insert_token(client_code, nil, nil)
+    build_and_insert_session_token(client_code, nil)
   end
 
-  defp build_and_insert_token(client_code, granter_code, granter_token) do
-    {token, client_token} =
-      ClientToken.build_hashed_token(client_code, "session", granter_code, granter_token)
+  defp build_and_insert_session_token(client_code, granter_code) do
+    {token, client_token} = ClientToken.build_hashed_token(client_code, "session")
 
-    Repo.insert!(client_token)
+    Repo.transaction(fn ->
+      client_token = Repo.insert!(client_token)
+      Repo.insert!(%TokenGranter{granter_code: granter_code, client_token_id: client_token.id})
+    end)
+
     token
   end
 
