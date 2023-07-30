@@ -1,5 +1,9 @@
 # SlippiChat
 
+Text chat for Slippi netplay. Not yet hosted.
+
+## Local development
+
 To start your Phoenix server:
 
   * Run `mix setup` to install and setup dependencies
