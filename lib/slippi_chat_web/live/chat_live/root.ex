@@ -53,7 +53,8 @@ defmodule SlippiChatWeb.ChatLive.Root do
   end
 
   @impl true
-  def mount(%{"code" => code}, _session, socket) do
+  def mount(_params, _session, socket) do
+    code = socket.assigns.current_user_code
     player_code = translate_code(code)
     socket = assign(socket, :player_code, player_code)
 

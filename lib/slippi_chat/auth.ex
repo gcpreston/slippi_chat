@@ -8,36 +8,67 @@ defmodule SlippiChat.Auth do
   import Ecto.Query, warn: false
   alias SlippiChat.Repo
 
-  alias SlippiChat.Auth.ClientToken
+  alias SlippiChat.Auth.{ClientToken, TokenGranter}
 
   ## Session
 
   @doc """
   Generates a session token.
+  """
+  def generate_user_session_token(client_code) do
+    {token, user_token} = ClientToken.build_session_token(client_code)
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the connect code for the given signed token.
+  """
+  def get_client_code_by_session_token(token) do
+    {:ok, query} = ClientToken.verify_session_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_user_session_token(token) do
+    Repo.delete_all(ClientToken.token_and_context_query(token, "session"))
+    :ok
+  end
+
+  @doc """
+  Generates a client token.
 
   Returns `:error` if the granter token is not valid.
   """
-  def generate_granted_session_token(client_code, granter_token) do
-    with {:ok, query} <- ClientToken.verify_hashed_token_query(granter_token, "session"),
+  def generate_granted_client_token(client_code, granter_token) do
+    with {:ok, query} <- ClientToken.verify_hashed_token_query(granter_token, "client"),
          granter_code when not is_nil(granter_code) <- Repo.one(query) do
-      build_and_insert_token(client_code, granter_code, granter_token)
+      build_and_insert_client_token(client_code, granter_code)
     else
       _ -> :error
     end
   end
 
   @doc """
-  Generates a session token without a granter.
+  Generates a client token without a granter.
   """
-  def generate_admin_session_token(client_code) do
-    build_and_insert_token(client_code, nil, nil)
+  def generate_admin_client_token(client_code) do
+    build_and_insert_client_token(client_code, nil)
   end
 
-  defp build_and_insert_token(client_code, granter_code, granter_token) do
-    {token, client_token} =
-      ClientToken.build_hashed_token(client_code, "session", granter_code, granter_token)
+  defp build_and_insert_client_token(client_code, granter_code) do
+    {token, client_token} = ClientToken.build_hashed_token(client_code, "client")
 
-    Repo.insert!(client_token)
+    Repo.transaction(fn ->
+      client_token = Repo.insert!(client_token)
+
+      if granter_code do
+        Repo.insert!(%TokenGranter{granter_code: granter_code, client_token_id: client_token.id})
+      end
+    end)
+
     token
   end
 
@@ -46,25 +77,11 @@ defmodule SlippiChat.Auth do
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_session_token(token) do
-    with {:ok, query} <- ClientToken.verify_hashed_token_query(token, "session") do
+  def get_client_code_by_client_token(token) do
+    with {:ok, query} <- ClientToken.verify_hashed_token_query(token, "client") do
       Repo.one(query)
     else
       _ -> nil
-    end
-  end
-
-  @doc """
-  Deletes a session token.
-  """
-  def delete_session_token(token) do
-    case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
-        Repo.delete_all(ClientToken.token_and_context_query(decoded_token, "session"))
-        :ok
-
-      :error ->
-        :error
     end
   end
 end

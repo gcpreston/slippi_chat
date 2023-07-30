@@ -2,77 +2,105 @@ defmodule SlippiChat.AuthTest do
   use SlippiChat.DataCase, async: true
 
   alias SlippiChat.Auth
-  alias SlippiChat.Auth.ClientToken
+  alias SlippiChat.Auth.{ClientToken, TokenGranter}
 
-  describe "generate_granted_session_token/2" do
-    test "generates a session token" do
-      granter_code = "ABC#123"
-      granter_token = Auth.generate_admin_session_token(granter_code)
-
-      client_code = "DEF#456"
-      token = Auth.generate_granted_session_token(client_code, granter_token)
-      {:ok, token} = Base.url_decode64(token, padding: false)
-
-      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
-      assert client_token.context == "session"
-      assert client_token.client_code == client_code
-      assert client_token.granter_code == granter_code
-      assert client_token.granter_token == granter_token
+  describe "generate_user_session_token/1" do
+    setup do
+      %{client_code: "ABC#123"}
     end
 
-    test "does not generate a token with an invalid granter token" do
-      assert Auth.generate_granted_session_token("ABC#123", "invalid token") == :error
-    end
-  end
+    test "generates a token", %{client_code: client_code} do
+      token = Auth.generate_user_session_token(client_code)
+      assert user_token = Repo.get_by(ClientToken, token: token)
+      assert user_token.context == "session"
 
-  describe "generate_admin_session_token/1" do
-    test "generates a session token" do
-      client_code = "ABC#123"
-      token = Auth.generate_admin_session_token(client_code)
-      {:ok, token} = Base.url_decode64(token, padding: false)
-
-      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
-      assert client_token.context == "session"
-      assert client_token.client_code == client_code
+      # Creating the same token for another user should fail
+      assert_raise Ecto.ConstraintError, fn ->
+        Repo.insert!(%ClientToken{
+          token: user_token.token,
+          client_code: client_code,
+          context: "session"
+        })
+      end
     end
   end
 
   describe "get_client_code_by_session_token/1" do
-    test "returns the client code for a valid token" do
+    setup do
       client_code = "ABC#123"
-      token = Auth.generate_admin_session_token(client_code)
-
-      assert Auth.get_client_code_by_session_token(token) == client_code
+      token = Auth.generate_user_session_token(client_code)
+      %{client_code: client_code, token: token}
     end
 
-    test "returns `nil` for an invalid token" do
-      assert Auth.get_client_code_by_session_token(":)") == nil
-      assert Auth.get_client_code_by_session_token(Base.url_encode64(":)", padding: false)) == nil
+    test "returns client code by token", %{client_code: client_code, token: token} do
+      assert session_code = Auth.get_client_code_by_session_token(token)
+      assert session_code == client_code
+    end
+
+    test "does not return client code for invalid token" do
+      refute Auth.get_client_code_by_session_token("oops")
+    end
+
+    test "does not return client code for expired token", %{token: token} do
+      {1, nil} = Repo.update_all(ClientToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      refute Auth.get_client_code_by_session_token(token)
     end
   end
 
-  describe "delete_session_token/1" do
-    test "deletes a valid token" do
+  describe "delete_user_session_token/1" do
+    test "deletes the token" do
       client_code = "ABC#123"
-      token = Auth.generate_admin_session_token(client_code)
-      {:ok, decoded_token} = Base.url_decode64(token, padding: false)
+      token = Auth.generate_user_session_token(client_code)
+      assert Auth.delete_user_session_token(token) == :ok
+      refute Auth.get_client_code_by_session_token(token)
+    end
+  end
 
-      assert %ClientToken{} =
-               Repo.get_by(ClientToken, token: :crypto.hash(:sha256, decoded_token))
+  describe "generate_granted_client_token/2" do
+    test "generates a client token" do
+      granter_code = "ABC#123"
+      granter_token = Auth.generate_admin_client_token(granter_code)
 
-      assert Auth.delete_session_token(token) == :ok
-      assert Repo.get_by(ClientToken, token: :crypto.hash(:sha256, decoded_token)) == nil
+      client_code = "DEF#456"
+      token = Auth.generate_granted_client_token(client_code, granter_token)
+      {:ok, token} = Base.url_decode64(token, padding: false)
+
+      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
+      assert client_token.context == "client"
+      assert client_token.client_code == client_code
+
+      assert granter = Repo.get_by(TokenGranter, client_token_id: client_token.id)
+      assert granter.granter_code == granter_code
     end
 
-    test "returns :error if token is not base64" do
-      assert Auth.delete_session_token(":)") == :error
+    test "does not generate a token with an invalid granter token" do
+      assert Auth.generate_granted_client_token("ABC#123", "invalid token") == :error
+    end
+  end
+
+  describe "generate_admin_client_token/1" do
+    test "generates a client token" do
+      client_code = "ABC#123"
+      token = Auth.generate_admin_client_token(client_code)
+      {:ok, token} = Base.url_decode64(token, padding: false)
+
+      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
+      assert client_token.context == "client"
+      assert client_token.client_code == client_code
+    end
+  end
+
+  describe "get_client_code_by_client_token/1" do
+    test "returns the client code for a valid token" do
+      client_code = "ABC#123"
+      token = Auth.generate_admin_client_token(client_code)
+
+      assert Auth.get_client_code_by_client_token(token) == client_code
     end
 
-    test "deletes nothing if token is not valid" do
-      count_before = Repo.aggregate(ClientToken, :count, :id)
-      assert Auth.delete_session_token(Base.url_encode64(":)", padding: false)) == :ok
-      count_after = Repo.aggregate(ClientToken, :count, :id)
-      assert count_before == count_after
+    test "returns `nil` for an invalid token" do
+      assert Auth.get_client_code_by_client_token(":)") == nil
+      assert Auth.get_client_code_by_client_token(Base.url_encode64(":)", padding: false)) == nil
     end
   end
 end

@@ -60,4 +60,17 @@ defmodule SlippiChatWeb.ConnCase do
 
     SlippiChat.TimeHelper.wait_until(wrapped_fun)
   end
+
+  @doc """
+  Logs a user for the given `client_code` into the `conn`.
+
+  It returns an updated `conn`.
+  """
+  def log_in_user(conn, client_code) do
+    token = SlippiChat.Auth.generate_user_session_token(client_code)
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:user_token, token)
+  end
 end

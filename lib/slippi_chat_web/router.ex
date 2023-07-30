@@ -1,6 +1,8 @@
 defmodule SlippiChatWeb.Router do
   use SlippiChatWeb, :router
 
+  import SlippiChatWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule SlippiChatWeb.Router do
     plug :put_root_layout, {SlippiChatWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user_code
   end
 
   pipeline :api do
@@ -18,8 +21,34 @@ defmodule SlippiChatWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+  end
 
-    live "/chat/:code", ChatLive.Root, :show
+  scope "/", SlippiChatWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_authenticated_user,
+      on_mount: [{SlippiChatWeb.UserAuth, :ensure_authenticated}] do
+      live "/chat", ChatLive.Root, :index
+    end
+  end
+
+  ## Authentication routes
+
+  scope "/", SlippiChatWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    live_session :redirect_if_user_is_authenticated,
+      on_mount: [{SlippiChatWeb.UserAuth, :redirect_if_user_is_authenticated}] do
+      live "/log_in", UserLoginLive, :new
+    end
+
+    post "/log_in", UserSessionController, :create
+  end
+
+  scope "/", SlippiChatWeb do
+    pipe_through [:browser]
+
+    delete "/log_out", UserSessionController, :delete
   end
 
   # Other scopes may use custom stacks.

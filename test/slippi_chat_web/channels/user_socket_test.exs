@@ -9,9 +9,9 @@ defmodule SlippiChatWeb.UserSocketTest do
   end
 
   describe "connect" do
-    test "requires a session token", %{socket: socket} do
+    test "requires a client token", %{socket: socket} do
       client_code = "ABC#123"
-      client_token = Auth.generate_admin_session_token(client_code)
+      client_token = Auth.generate_admin_client_token(client_code)
 
       assert {:ok, socket} = UserSocket.connect(%{"client_token" => client_token}, socket)
       assert socket.assigns.client_code == client_code
@@ -21,7 +21,7 @@ defmodule SlippiChatWeb.UserSocketTest do
       assert UserSocket.connect(%{}, socket) == :error
     end
 
-    test "refuses connection on invalid session token", %{socket: socket} do
+    test "refuses connection on invalid client token", %{socket: socket} do
       fake_token = "fake token"
       encoded_fake_token = Base.url_encode64("fake token", padding: false)
 

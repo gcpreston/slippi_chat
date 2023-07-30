@@ -17,37 +17,60 @@ defmodule SlippiChatWeb.GameLive.RootTest do
     Application.fetch_env!(:slippi_chat, :chat_session_registry)
   end
 
-  describe "Show" do
-    ## Rendering
+  defp authenticate(%{conn: conn}) do
+    client_code = "ABC#123"
+    %{conn: log_in_user(conn, client_code), client_code: client_code}
+  end
 
-    test "renders empty state when there is no chat session", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/chat/abc-123")
+  describe "Mount" do
+    test "redirects if user is not logged in", %{conn: conn} do
+      assert {:error, redirect} = live(conn, ~p"/chat")
 
-      assert html =~ "ABC#123"
+      assert {:redirect, %{to: path, flash: flash}} = redirect
+      assert path == ~p"/log_in"
+      assert %{"error" => "You must log in to access this page."} = flash
+    end
+  end
+
+  describe "Rendering" do
+    setup [:authenticate]
+
+    test "renders empty state when there is no chat session", %{
+      conn: conn,
+      client_code: client_code
+    } do
+      {:ok, _lv, html} = live(conn, ~p"/chat")
+
+      assert html =~ client_code
       assert html =~ "No chat session in progress."
     end
 
-    test "renders chat session and its data when one exists", %{conn: conn} do
-      player_codes = ["ABC#123", "XYZ#987"]
+    test "renders chat session and its data when one exists", %{
+      conn: conn,
+      client_code: client_code
+    } do
+      player_codes = [client_code, "XYZ#987"]
       {:ok, pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, message} = ChatSession.send_message(pid, "XYZ#987", "hello world!")
-      {:ok, _lv, html} = live(conn, ~p"/chat/abc-123")
+      {:ok, _lv, html} = live(conn, ~p"/chat")
 
       assert html =~ "Chat session players:"
       Enum.each(player_codes, fn player_code -> assert html =~ player_code end)
       assert html =~ message.id
       assert html =~ "hello world!"
     end
+  end
 
-    ## Events
+  describe "Events" do
+    setup [:authenticate]
 
     test "sends messages", %{conn: conn1} do
       player_codes = ["ABC#123", "XYZ#987"]
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
 
-      conn2 = Phoenix.ConnTest.build_conn()
-      {:ok, lv1, _html1} = live(conn1, ~p"/chat/abc-123")
-      {:ok, lv2, _html2} = live(conn2, ~p"/chat/xyz-987")
+      conn2 = Phoenix.ConnTest.build_conn() |> log_in_user("XYZ#987")
+      {:ok, lv1, _html1} = live(conn1, ~p"/chat")
+      {:ok, lv2, _html2} = live(conn2, ~p"/chat")
 
       lv1
       |> element("#message-form")
@@ -63,7 +86,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       # No refresh
 
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
-      {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
+      {:ok, lv, html} = live(conn, ~p"/chat")
       assert html =~ "Chat session players:"
       Process.sleep(chat_session_timeout_ms())
       refute render(lv) =~ "Chat session players:"
@@ -71,7 +94,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       # Refresh
 
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
-      {:ok, lv, html} = live(conn, ~p"/chat/abc-123")
+      {:ok, lv, html} = live(conn, ~p"/chat")
       assert html =~ "Chat session players:"
       Process.sleep(div(chat_session_timeout_ms(), 2))
 
@@ -94,9 +117,9 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       Endpoint.subscribe("clients")
 
-      conn2 = Phoenix.ConnTest.build_conn()
-      {:ok, lv1, html1} = live(conn1, ~p"/chat/abc-123")
-      {:ok, lv2, html2} = live(conn2, ~p"/chat/xyz-987")
+      conn2 = Phoenix.ConnTest.build_conn() |> log_in_user("XYZ#987")
+      {:ok, lv1, html1} = live(conn1, ~p"/chat")
+      {:ok, lv2, html2} = live(conn2, ~p"/chat")
 
       Enum.each([html1, html2], fn html ->
         refute html =~ "ABC#123 (online)"
@@ -151,7 +174,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, pid} =
         ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
 
-      {:ok, lv, _html} = live(conn, ~p"/chat/abc-123")
+      {:ok, lv, _html} = live(conn, ~p"/chat")
 
       html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
       assert html =~ "XYZ#987"
@@ -170,7 +193,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, pid} =
         ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
 
-      {:ok, lv, _html} = live(conn, ~p"/chat/abc-123")
+      {:ok, lv, _html} = live(conn, ~p"/chat")
 
       html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
       assert html =~ "XYZ#987"
