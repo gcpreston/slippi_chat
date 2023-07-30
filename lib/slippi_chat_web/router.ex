@@ -21,14 +21,15 @@ defmodule SlippiChatWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-
-    live "/chat/:code", ChatLive.Root, :show
   end
 
   scope "/", SlippiChatWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    # TODO
+    live_session :require_authenticated_user,
+      on_mount: [{SlippiChatWeb.UserAuth, :ensure_authenticated}] do
+      live "/chat", ChatLive.Root, :index
+    end
   end
 
   ## Authentication routes

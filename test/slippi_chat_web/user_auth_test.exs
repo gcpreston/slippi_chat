@@ -25,7 +25,10 @@ defmodule SlippiChatWeb.UserAuthTest do
       assert Auth.get_client_code_by_session_token(token)
     end
 
-    test "clears everything previously stored in the session", %{conn: conn, client_code: client_code} do
+    test "clears everything previously stored in the session", %{
+      conn: conn,
+      client_code: client_code
+    } do
       conn = conn |> put_session(:to_be_removed, "value") |> UserAuth.log_in_user(client_code)
       refute get_session(conn, :to_be_removed)
     end
@@ -36,7 +39,9 @@ defmodule SlippiChatWeb.UserAuthTest do
     end
 
     test "writes a cookie if remember_me is configured", %{conn: conn, client_code: client_code} do
-      conn = conn |> fetch_cookies() |> UserAuth.log_in_user(client_code, %{"remember_me" => "true"})
+      conn =
+        conn |> fetch_cookies() |> UserAuth.log_in_user(client_code, %{"remember_me" => "true"})
+
       assert get_session(conn, :user_token) == conn.cookies[@remember_me_cookie]
 
       assert %{value: signed_token, max_age: max_age} = conn.resp_cookies[@remember_me_cookie]
@@ -117,7 +122,10 @@ defmodule SlippiChatWeb.UserAuthTest do
   end
 
   describe "on_mount: mount_current_user" do
-    test "assigns current_user based on a valid user_token", %{conn: conn, client_code: client_code} do
+    test "assigns current_user based on a valid user_token", %{
+      conn: conn,
+      client_code: client_code
+    } do
       user_token = Auth.generate_user_session_token(client_code)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
@@ -148,7 +156,10 @@ defmodule SlippiChatWeb.UserAuthTest do
   end
 
   describe "on_mount: ensure_authenticated" do
-    test "authenticates current_user based on a valid user_token", %{conn: conn, client_code: client_code} do
+    test "authenticates current_user based on a valid user_token", %{
+      conn: conn,
+      client_code: client_code
+    } do
       user_token = Auth.generate_user_session_token(client_code)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
@@ -213,7 +224,11 @@ defmodule SlippiChatWeb.UserAuthTest do
 
   describe "redirect_if_user_is_authenticated/2" do
     test "redirects if user is authenticated", %{conn: conn, client_code: client_code} do
-      conn = conn |> assign(:current_user_code, client_code) |> UserAuth.redirect_if_user_is_authenticated([])
+      conn =
+        conn
+        |> assign(:current_user_code, client_code)
+        |> UserAuth.redirect_if_user_is_authenticated([])
+
       assert conn.halted
       assert redirected_to(conn) == ~p"/"
     end
@@ -263,7 +278,9 @@ defmodule SlippiChatWeb.UserAuthTest do
     end
 
     test "does not redirect if user is authenticated", %{conn: conn, client_code: client_code} do
-      conn = conn |> assign(:current_user_code, client_code) |> UserAuth.require_authenticated_user([])
+      conn =
+        conn |> assign(:current_user_code, client_code) |> UserAuth.require_authenticated_user([])
+
       refute conn.halted
       refute conn.status
     end
