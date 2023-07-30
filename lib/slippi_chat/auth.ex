@@ -8,9 +8,34 @@ defmodule SlippiChat.Auth do
   import Ecto.Query, warn: false
   alias SlippiChat.Repo
 
-  alias SlippiChat.Auth.ClientToken
+  alias SlippiChat.Auth.{ClientToken, TokenGranter}
 
   ## Session
+
+  @doc """
+  Generates a session token.
+  """
+  def generate_user_session_token(client_code) do
+    {token, user_token} = ClientToken.build_session_token(client_code)
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the connect code for the given signed token.
+  """
+  def get_client_code_by_session_token(token) do
+    {:ok, query} = ClientToken.verify_session_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_user_session_token(token) do
+    Repo.delete_all(ClientToken.token_and_context_query(token, "session"))
+    :ok
+  end
 
   @doc """
   Generates a client token.
@@ -38,7 +63,10 @@ defmodule SlippiChat.Auth do
 
     Repo.transaction(fn ->
       client_token = Repo.insert!(client_token)
-      Repo.insert!(%TokenGranter{granter_code: granter_code, client_token_id: client_token.id})
+
+      if granter_code do
+        Repo.insert!(%TokenGranter{granter_code: granter_code, client_token_id: client_token.id})
+      end
     end)
 
     token
@@ -54,20 +82,6 @@ defmodule SlippiChat.Auth do
       Repo.one(query)
     else
       _ -> nil
-    end
-  end
-
-  @doc """
-  Deletes a client token.
-  """
-  def delete_client_token(token) do
-    case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
-        Repo.delete_all(ClientToken.token_and_context_query(decoded_token, "client"))
-        :ok
-
-      :error ->
-        :error
     end
   end
 end
