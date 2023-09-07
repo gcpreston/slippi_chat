@@ -28,11 +28,12 @@ defmodule SlippiChatWeb.ClientChannelTest do
     test "tracks via Presence", %{socket: socket1} do
       assert Presence.list("clients") |> Map.keys() == ["ABC#123"]
 
-      {:ok, _reply, _socket2} =
+      {:ok, reply, _socket2} =
         UserSocket
         |> socket("user_socket:DEF#456", %{client_code: "DEF#456"})
         |> subscribe_and_join(ClientChannel, "clients")
 
+      assert reply == %{connect_code: "DEF#456"}
       assert Presence.list("clients") |> Map.keys() == ["ABC#123", "DEF#456"]
 
       Process.unlink(socket1.channel_pid)

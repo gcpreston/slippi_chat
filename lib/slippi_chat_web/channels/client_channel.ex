@@ -34,7 +34,7 @@ defmodule SlippiChatWeb.ClientChannel do
             |> assign(:current_session_player_codes, nil)
         end
 
-      {:ok, socket}
+      {:ok, %{connect_code: client_code}, socket}
     else
       {:error, %{reason: "unauthorized"}}
     end
