@@ -170,6 +170,38 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       end)
     end
 
+    test "displays online status of the current player", %{conn: conn, client_code: client_code} do
+      {:ok, lv, html} = live(conn, ~p"/chat")
+
+      assert html =~ "No chat session in progress."
+      assert html =~ client_code
+      refute html =~ "(online)"
+
+      {:ok, _reply, _socket} =
+        UserSocket
+        |> socket("user_socket:#{client_code}", %{client_code: client_code})
+        |> subscribe_and_join(ClientChannel, "clients")
+
+      render_until(lv, fn html -> assert html =~ "(online)" end)
+    end
+
+    test "Disconnect button ends the session", %{conn: conn} do
+      {:ok, _pid} =
+        ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
+
+      {:ok, lv, _html} = live(conn, ~p"/chat")
+
+      html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
+      assert html =~ "XYZ#987"
+
+      lv
+      |> element("button", "Disconnect")
+      |> render_click()
+
+      html = render_until(lv, fn html -> assert html =~ "No chat session in progress." end)
+      refute html =~ "XYZ#987"
+    end
+
     test "reacts to chat session end", %{conn: conn} do
       {:ok, pid} =
         ChatSessionRegistry.start_chat_session(chat_session_registry(), ["ABC#123", "XYZ#987"])
