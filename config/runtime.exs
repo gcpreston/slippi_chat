@@ -22,6 +22,7 @@ end
 
 config :slippi_chat, :chat_session_registry, SlippiChat.ChatSessionRegistry
 config :slippi_chat, :chat_session_timeout_ms, :timer.minutes(15)
+config :slippi_chat, :magic_authenticator, SlippiChat.Auth.MagicAuthenticator
 
 if config_env() == :test do
   config :slippi_chat, :chat_session_timeout_ms, 150
