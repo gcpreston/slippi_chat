@@ -1,5 +1,5 @@
 defmodule SlippiChatWeb.UserLoginLiveTest do
-  use SlippiChatWeb.ConnCase, async: true
+  use SlippiChatWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   alias SlippiChat.Auth

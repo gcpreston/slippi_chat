@@ -82,6 +82,22 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
+  Generates a token to be used in the magic login flow.
+  """
+  def generate_magic_token(client_code) do
+    build_and_insert_signed_token(client_code, "magic")
+  end
+
+  @doc """
+  Gets the client_code for the given magic token.
+
+  Returns `nil` if the token doesn't exist or isn't valid.
+  """
+  def get_client_code_by_magic_token(client_code) do
+    get_client_code_by_signed_token(client_code, "magic")
+  end
+
+  @doc """
   Generates a token for logging in a user.
   """
   def generate_login_token(client_code) do
@@ -108,6 +124,13 @@ defmodule SlippiChat.Auth do
 
     Repo.delete_all(query)
   end
+
+  defp build_and_insert_signed_token(client_code, context) do
+    {token, client_token} = ClientToken.build_hashed_token(client_code, context)
+    Repo.insert!(client_token)
+    token
+  end
+
   @doc """
   Gets the client_code for the given signed token.
 
