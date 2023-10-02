@@ -14,4 +14,14 @@ defmodule SlippiChat.Injections do
       Application.put_env(:slippi_chat, :chat_session_registry, old_registry)
     end)
   end
+
+  def set_magic_authenticator(name) do
+    old_authenticator = Application.fetch_env!(:slippi_chat, :magic_authenticator)
+    ExUnit.Callbacks.start_supervised!({SlippiChat.Auth.MagicAuthenticator, name: name})
+    Application.put_env(:slippi_chat, :magic_authenticator, name)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      Application.put_env(:slippi_chat, :magic_authenticator, old_authenticator)
+    end)
+  end
 end

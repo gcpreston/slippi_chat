@@ -22,7 +22,8 @@ defmodule SlippiChat.Application do
       SlippiChatWeb.Endpoint,
       # Start a worker by calling: SlippiChat.Worker.start_link(arg)
       # {SlippiChat.Worker, arg}
-      {SlippiChat.ChatSessions.Supervisor, name: SlippiChat.ChatSessions.Supervisor}
+      {SlippiChat.ChatSessions.Supervisor, name: SlippiChat.ChatSessions.Supervisor},
+      {SlippiChat.Auth.MagicAuthenticator, name: SlippiChat.Auth.MagicAuthenticator}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

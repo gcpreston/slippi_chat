@@ -34,7 +34,8 @@ defmodule SlippiChatWeb.ConnCase do
 
   setup tags do
     SlippiChat.DataCase.setup_sandbox(tags)
-    SlippiChat.Injections.set_chat_session_registry(tags.test)
+    SlippiChat.Injections.set_chat_session_registry(:"chat_session_registry #{tags.test}")
+    SlippiChat.Injections.set_magic_authenticator(:"magic_authenticator #{tags.test}")
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

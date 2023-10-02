@@ -73,12 +73,71 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
+  Gets the client_code for the given client token.
+
+  Returns `nil` if the token doesn't exist or isn't valid.
+  """
+  def get_client_code_by_client_token(client_code) do
+    get_client_code_by_signed_token(client_code, "client")
+  end
+
+  @doc """
+  Generates a token to be used in the magic login flow.
+  """
+  def generate_magic_token(client_code) do
+    build_and_insert_signed_token(client_code, "magic")
+  end
+
+  @doc """
+  Gets the client_code for the given magic token.
+
+  Returns `nil` if the token doesn't exist or isn't valid.
+  """
+  def get_client_code_by_magic_token(client_code) do
+    get_client_code_by_signed_token(client_code, "magic")
+  end
+
+  @doc """
+  Generates a token for logging in a user.
+  """
+  def generate_login_token(client_code) do
+    build_and_insert_signed_token(client_code, "login")
+  end
+
+  @doc """
+  Gets the client_code for the given login token.
+
+  Returns `nil` if the token doesn't exist or isn't valid.
+  """
+  def get_client_code_by_login_token(client_code) do
+    get_client_code_by_signed_token(client_code, "login")
+  end
+
+  @doc """
+  Removes all login tokens for a client_code from the database.
+  """
+  def delete_login_tokens(client_code) do
+    query =
+      from t in ClientToken,
+        where: t.context == "login",
+        where: t.client_code == ^client_code
+
+    Repo.delete_all(query)
+  end
+
+  defp build_and_insert_signed_token(client_code, context) do
+    {token, client_token} = ClientToken.build_hashed_token(client_code, context)
+    Repo.insert!(client_token)
+    token
+  end
+
+  @doc """
   Gets the client_code for the given signed token.
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_client_token(token) do
-    with {:ok, query} <- ClientToken.verify_hashed_token_query(token, "client") do
+  def get_client_code_by_signed_token(token, context) do
+    with {:ok, query} <- ClientToken.verify_hashed_token_query(token, context) do
       Repo.one(query)
     else
       _ -> nil

@@ -89,6 +89,13 @@ defmodule SlippiChatWeb.UserAuth do
   and remember me token.
   """
   def fetch_current_user_code(conn, _opts) do
+    case get_format(conn) do
+      "html" -> fetch_user_code_from_session(conn)
+      "json" -> fetch_user_code_from_authorization(conn)
+    end
+  end
+
+  defp fetch_user_code_from_session(conn) do
     {user_token, conn} = ensure_user_token(conn)
     connect_code = user_token && Auth.get_client_code_by_session_token(user_token)
     assign(conn, :current_user_code, connect_code)
@@ -105,6 +112,22 @@ defmodule SlippiChatWeb.UserAuth do
       else
         {nil, conn}
       end
+    end
+  end
+
+  defp fetch_user_code_from_authorization(conn) do
+    client_token = get_bearer_token(conn)
+
+    connect_code =
+      if client_token, do: Auth.get_client_code_by_client_token(client_token), else: nil
+
+    assign(conn, :current_user_code, connect_code)
+  end
+
+  defp get_bearer_token(conn) do
+    case get_req_header(conn, "authorization") do
+      ["Bearer " <> token] -> token
+      _ -> nil
     end
   end
 
@@ -203,10 +226,19 @@ defmodule SlippiChatWeb.UserAuth do
     if conn.assigns[:current_user_code] do
       conn
     else
-      conn
-      |> put_flash(:error, "You must log in to access this page.")
-      |> maybe_store_return_to()
-      |> redirect(to: ~p"/log_in")
+      case get_format(conn) do
+        "html" ->
+          conn
+          |> put_flash(:error, "You must log in to access this page.")
+          |> maybe_store_return_to()
+          |> redirect(to: ~p"/log_in")
+
+        "json" ->
+          conn
+          |> put_status(:unauthorized)
+          |> put_view(SlippiChatWeb.ErrorJSON)
+          |> render(:"401")
+      end
       |> halt()
     end
   end

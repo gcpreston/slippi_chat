@@ -88,9 +88,25 @@ defmodule SlippiChatWeb.UserAuthTest do
   end
 
   describe "fetch_current_user_code/2" do
+    setup %{conn: conn} do
+      %{conn: Phoenix.Controller.put_format(conn, "html")}
+    end
+
     test "authenticates user from session", %{conn: conn, client_code: client_code} do
       user_token = Auth.generate_user_session_token(client_code)
       conn = conn |> put_session(:user_token, user_token) |> UserAuth.fetch_current_user_code([])
+      assert conn.assigns.current_user_code == client_code
+    end
+
+    test "authenticates user from bearer token", %{conn: conn, client_code: client_code} do
+      client_token = Auth.generate_admin_client_token(client_code)
+
+      conn =
+        conn
+        |> Phoenix.Controller.put_format("json")
+        |> put_req_header("authorization", "Bearer #{client_token}")
+        |> UserAuth.fetch_current_user_code(conn)
+
       assert conn.assigns.current_user_code == client_code
     end
 
@@ -241,6 +257,10 @@ defmodule SlippiChatWeb.UserAuthTest do
   end
 
   describe "require_authenticated_user/2" do
+    setup %{conn: conn} do
+      %{conn: Phoenix.Controller.put_format(conn, "html")}
+    end
+
     test "redirects if user is not authenticated", %{conn: conn} do
       conn = conn |> fetch_flash() |> UserAuth.require_authenticated_user([])
       assert conn.halted
@@ -249,6 +269,16 @@ defmodule SlippiChatWeb.UserAuthTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "You must log in to access this page."
+    end
+
+    test "returns 401 for JSON requests if user is not authenticated", %{conn: conn} do
+      conn =
+        conn
+        |> Phoenix.Controller.put_format("json")
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert json_response(conn, 401) == %{"errors" => %{"detail" => "Unauthorized"}}
     end
 
     test "stores the path to redirect to on GET", %{conn: conn} do

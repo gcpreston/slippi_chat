@@ -15,6 +15,7 @@ defmodule SlippiChatWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_current_user_code
   end
 
   scope "/", SlippiChatWeb do
@@ -40,6 +41,7 @@ defmodule SlippiChatWeb.Router do
     live_session :redirect_if_user_is_authenticated,
       on_mount: [{SlippiChatWeb.UserAuth, :redirect_if_user_is_authenticated}] do
       live "/log_in", UserLoginLive, :new
+      live "/magic_log_in", MagicLoginLive, :new
     end
 
     post "/log_in", UserSessionController, :create
@@ -51,10 +53,11 @@ defmodule SlippiChatWeb.Router do
     delete "/log_out", UserSessionController, :delete
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SlippiChatWeb do
-  #   pipe_through :api
-  # end
+  scope "/", SlippiChatWeb do
+    pipe_through [:api, :require_authenticated_user]
+
+    post "/magic_verify", UserSessionController, :verify
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:slippi_chat, :dev_routes) do

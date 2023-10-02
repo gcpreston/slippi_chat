@@ -90,17 +90,21 @@ defmodule SlippiChat.AuthTest do
     end
   end
 
-  describe "get_client_code_by_client_token/1" do
+  describe "get_client_code_by_signed_token/2" do
     test "returns the client code for a valid token" do
       client_code = "ABC#123"
       token = Auth.generate_admin_client_token(client_code)
 
-      assert Auth.get_client_code_by_client_token(token) == client_code
+      assert Auth.get_client_code_by_signed_token(token, "client") == client_code
     end
 
     test "returns `nil` for an invalid token" do
-      assert Auth.get_client_code_by_client_token(":)") == nil
-      assert Auth.get_client_code_by_client_token(Base.url_encode64(":)", padding: false)) == nil
+      assert Auth.get_client_code_by_signed_token(":)", "client") == nil
+
+      assert Auth.get_client_code_by_signed_token(
+               Base.url_encode64(":)", padding: false),
+               "client"
+             ) == nil
     end
   end
 end
