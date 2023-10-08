@@ -56,7 +56,8 @@ defmodule SlippiChatWeb.Router do
   scope "/", SlippiChatWeb do
     pipe_through [:api, :require_authenticated_user]
 
-    post "/magic_verify", UserSessionController, :verify
+    post "/magic_generate", MagicLoginController, :generate
+    post "/magic_verify", MagicLoginController, :verify
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
