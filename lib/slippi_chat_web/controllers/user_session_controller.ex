@@ -2,12 +2,7 @@ defmodule SlippiChatWeb.UserSessionController do
   use SlippiChatWeb, :controller
 
   alias SlippiChat.Auth
-  alias SlippiChat.Auth.MagicAuthenticator
   alias SlippiChatWeb.UserAuth
-
-  defp magic_authenticator do
-    Application.fetch_env!(:slippi_chat, :magic_authenticator)
-  end
 
   def create(conn, %{"login_token" => login_token} = params) do
     params = params |> Map.delete("login_token") |> Map.put("token", login_token)
@@ -34,21 +29,6 @@ defmodule SlippiChatWeb.UserSessionController do
       conn
       |> put_flash(:error, "Invalid token")
       |> redirect(to: ~p"/log_in")
-    end
-  end
-
-  def verify(conn, %{"verification_code" => verification_code}) do
-    client_code = conn.assigns[:current_user_code]
-
-    if MagicAuthenticator.verify(magic_authenticator(), client_code, verification_code) do
-      conn
-      |> put_status(:ok)
-      |> render(:"200")
-    else
-      conn
-      |> put_status(:unauthorized)
-      |> put_view(SlippiChatWeb.ErrorJSON)
-      |> render(:"401")
     end
   end
 
