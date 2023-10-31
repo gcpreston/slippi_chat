@@ -45,6 +45,10 @@ defmodule SlippiChat.ChatSessions.ChatSession do
     GenServer.stop(server)
   end
 
+  def report(server, reporter, reportee) do
+    GenServer.call(server, {:report, reporter, reportee})
+  end
+
   ## Callbacks
 
   @impl true
@@ -67,6 +71,11 @@ defmodule SlippiChat.ChatSessions.ChatSession do
 
   def handle_call(:list_messages, _from, state) do
     {:reply, state.messages, state}
+  end
+
+  def handle_call({:report, reporter, reportee}, _from, state) do
+    report = ChatSessions.create_report!(reporter, reportee, Enum.reverse(state.messages))
+    {:reply, {:ok, report}, state}
   end
 
   @impl true

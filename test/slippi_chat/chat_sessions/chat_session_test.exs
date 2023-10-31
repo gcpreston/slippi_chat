@@ -1,8 +1,10 @@
 defmodule SlippiChat.ChatSessionTest do
-  use ExUnit.Case, async: false
+  use SlippiChat.DataCase, async: false
 
+  alias SlippiChat.Repo
   alias SlippiChat.ChatSessions
   alias SlippiChat.ChatSessions.ChatSession
+  alias SlippiChat.ChatSessions.Report
 
   defp chat_session_timeout_ms do
     Application.fetch_env!(:slippi_chat, :chat_session_timeout_ms)
@@ -70,6 +72,21 @@ defmodule SlippiChat.ChatSessionTest do
       Process.sleep(div(chat_session_timeout_ms(), 2))
 
       refute Process.alive?(pid)
+    end
+  end
+
+  describe "report/3" do
+    test "creates a report", %{pid: pid} do
+      ChatSession.send_message(pid, "ALIC#3", "ur mean")
+      ChatSession.send_message(pid, "BOB#1", "no your mean")
+      {:ok, report} = ChatSession.report(pid, "BOB#1", "ALIC#3")
+
+      assert report.reportee == "ALIC#3"
+      assert report.reporter == "BOB#1"
+      assert length(report.chat_log) == 2
+      assert %{sender: "ALIC#3", content: "ur mean"} = Enum.at(report.chat_log, 0)
+      assert %{sender: "BOB#1", content: "no your mean"} = Enum.at(report.chat_log, 1)
+      assert Repo.get(Report, report.id)
     end
   end
 
