@@ -65,6 +65,12 @@ defmodule SlippiChatWeb.ChatLive.Root do
         <div class="mt-3">
           <.button phx-click="disconnect">Disconnect</.button>
         </div>
+        <div class="mt-3">
+          <.button phx-click="report" disabled={@reported} class="disabled:opacity-75">
+            Report
+          </.button>
+          <.icon :if={@reported} name="hero-check" class="w-4 h-4 font-bold" />
+        </div>
       <% end %>
     </div>
     """
@@ -101,12 +107,14 @@ defmodule SlippiChatWeb.ChatLive.Root do
         socket
         |> assign(:chat_session_data, chat_session_data)
         |> assign(:online_codes, online_codes)
+        |> assign(:reported, false)
         |> stream(:messages, messages)
       else
         _ ->
           socket
           |> assign(:chat_session_data, nil)
           |> assign(:online_codes, MapSet.new())
+          |> assign(:reported, false)
           |> stream(:messages, [])
       end
 
@@ -131,6 +139,18 @@ defmodule SlippiChatWeb.ChatLive.Root do
     # and the opponent could see that this happened, but still have the chat log.
     ChatSession.end_session(socket.assigns.chat_session_data.pid)
     {:noreply, socket}
+  end
+
+  def handle_event("report", _value, socket) do
+    %{pid: chat_session_pid, player_codes: player_codes} = socket.assigns.chat_session_data
+
+    if length(player_codes) == 2 do
+      reporter = socket.assigns.current_player_code
+      opponent = Enum.find(player_codes, fn code -> code != reporter end)
+      ChatSession.report(chat_session_pid, reporter, opponent)
+
+      {:noreply, assign(socket, :reported, true)}
+    end
   end
 
   @impl true
