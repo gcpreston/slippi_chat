@@ -1,4 +1,7 @@
 defmodule SlippiChat.ChatSessions do
+  alias SlippiChat.Repo
+  alias SlippiChat.ChatSessions.Report
+
   @pubsub_topic "chat_sessions"
 
   def player_topic(player_code) when is_binary(player_code) do
@@ -12,5 +15,12 @@ defmodule SlippiChat.ChatSessions do
       |> Enum.join(",")
 
     "#{@pubsub_topic}:#{suffix}"
+  end
+
+  @spec create_report!(String.t(), String.t(), list(SlippiChat.ChatSessions.Message.t())) ::
+          Report.t()
+  def create_report!(reporter, reportee, chat_log) do
+    report = %Report{reporter: reporter, reportee: reportee, chat_log: chat_log}
+    Repo.insert!(report)
   end
 end
