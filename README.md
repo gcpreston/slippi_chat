@@ -1,6 +1,6 @@
 # SlippiChat
 
-Text chat for Slippi netplay. Not yet hosted.
+Text chat for Slippi netplay, found at [slippichat.net](https://slippichat.net).
 
 ## Local development
 
