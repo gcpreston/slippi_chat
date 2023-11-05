@@ -3,7 +3,7 @@ defmodule SlippiChatWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="mx-auto max-w-md">
       <.header class="text-center">
         Sign in to account
       </.header>
@@ -20,6 +20,19 @@ defmodule SlippiChatWeb.UserLoginLive do
           </.button>
         </:actions>
       </.simple_form>
+
+      <ul class="mt-6">
+        <li>
+          <.icon name="hero-arrow-down-circle" class="mr-2" />Download the client <a
+            href="https://github.com/gcpreston/slippi-chat-client/releases"
+            target="_blank"
+            class="text-blue-600 underline"
+          >here</a>.
+        </li>
+        <li>
+          <.icon name="hero-question-mark-circle" class="mr-2" />Need a token? Message graham#4664 on Discord.
+        </li>
+      </ul>
     </div>
     """
   end

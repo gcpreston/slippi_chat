@@ -21,7 +21,7 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
         id="message-form"
         for={@form}
         as={:message}
-        phx-submit="save"
+        phx-submit="send"
         phx-change="update"
         phx-target={@myself}
       >
@@ -38,8 +38,11 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
     {:noreply, socket |> assign_form(change_message(params))}
   end
 
-  def handle_event("save", %{"message" => %{"content" => content}}, socket) do
-    ChatSession.send_message(socket.assigns.chat_session_pid, socket.assigns.sender, content)
+  def handle_event("send", %{"message" => %{"content" => content}}, socket) do
+    unless String.trim(content) == "" do
+      ChatSession.send_message(socket.assigns.chat_session_pid, socket.assigns.sender, content)
+    end
+
     empty_changeset = change_message(%{})
 
     {:noreply, socket |> assign_form(empty_changeset)}

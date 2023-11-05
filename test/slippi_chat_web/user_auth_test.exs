@@ -266,9 +266,6 @@ defmodule SlippiChatWeb.UserAuthTest do
       assert conn.halted
 
       assert redirected_to(conn) == ~p"/log_in"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "You must log in to access this page."
     end
 
     test "returns 401 for JSON requests if user is not authenticated", %{conn: conn} do

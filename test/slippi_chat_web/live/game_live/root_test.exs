@@ -26,9 +26,8 @@ defmodule SlippiChatWeb.GameLive.RootTest do
     test "redirects if user is not logged in", %{conn: conn} do
       assert {:error, redirect} = live(conn, ~p"/chat")
 
-      assert {:redirect, %{to: path, flash: flash}} = redirect
+      assert {:redirect, %{to: path}} = redirect
       assert path == ~p"/log_in"
-      assert %{"error" => "You must log in to access this page."} = flash
     end
   end
 

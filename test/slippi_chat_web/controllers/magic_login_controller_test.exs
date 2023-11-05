@@ -1,5 +1,5 @@
 defmodule SlippiChatWeb.MagicLoginControllerTest do
-  use SlippiChatWeb.ConnCase, async: true
+  use SlippiChatWeb.ConnCase, async: false
 
   alias SlippiChat.Auth
   alias SlippiChat.Auth.MagicAuthenticator
