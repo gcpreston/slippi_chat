@@ -29,12 +29,17 @@ defmodule SlippiChatWeb.ChatLive.Root do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mb-3">
+    <div>
       <p class="current-player">
         User: <%= @current_player_code %>
         <%= if MapSet.member?(@online_codes, @current_player_code), do: " (online)", else: "" %>
       </p>
-      <%= if @chat_session_data do %>
+
+      <hr class="my-4" />
+
+      <%= unless @chat_session_data do %>
+        <div>No chat session in progress.</div>
+      <% else %>
         <div>
           <p>Chat session players:</p>
           <ul :for={player_code <- @chat_session_data.player_codes}>
@@ -45,31 +50,30 @@ defmodule SlippiChatWeb.ChatLive.Root do
             <% end %>
           </ul>
         </div>
-      <% else %>
-        <div>No chat session in progress.</div>
-      <% end %>
 
-      <%= if @chat_session_data do %>
-        <h3>Chat</h3>
-        <div id="chat-log" phx-update="stream">
-          <li :for={{dom_id, message} <- @streams.messages} id={dom_id} class="chat-message">
-            <%= message.sender %>: <%= message.content %>
-          </li>
-        </div>
-        <.live_component
-          module={SlippiChatWeb.ChatLive.Message.Form}
-          id={:new}
-          sender={@current_player_code}
-          chat_session_pid={@chat_session_data.pid}
-        />
-        <div class="mt-3">
+        <div class="mt-4 flex flex-row gap-4">
           <.button phx-click="disconnect">Disconnect</.button>
+          <div>
+            <.button phx-click="report" disabled={@reported} class="disabled:opacity-75">
+              Report
+            </.button>
+            <.icon :if={@reported} name="hero-check" class="w-4 h-4 font-bold" />
+          </div>
         </div>
-        <div class="mt-3">
-          <.button phx-click="report" disabled={@reported} class="disabled:opacity-75">
-            Report
-          </.button>
-          <.icon :if={@reported} name="hero-check" class="w-4 h-4 font-bold" />
+
+        <div class="mt-4">
+          <h3 class="mb-2">Chat</h3>
+          <ul id="chat-log" phx-update="stream" class="max-h-64 overflow-auto flex flex-col-reverse">
+            <li :for={{dom_id, message} <- @streams.messages} id={dom_id} class="chat-message">
+              <%= message.sender %>: <%= message.content %>
+            </li>
+          </ul>
+          <.live_component
+            module={SlippiChatWeb.ChatLive.Message.Form}
+            id={:new}
+            sender={@current_player_code}
+            chat_session_pid={@chat_session_data.pid}
+          />
         </div>
       <% end %>
     </div>
@@ -97,7 +101,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
            player_codes when is_list(player_codes) <- ChatSession.get_player_codes(pid) do
         chat_session_topic = ChatSessions.chat_session_topic(player_codes)
         chat_session_data = ChatSessionData.new(pid, player_codes, chat_session_topic)
-        messages = Enum.reverse(ChatSession.list_messages(pid))
+        messages = ChatSession.list_messages(pid)
         online_codes = MapSet.new(online_players(player_codes))
 
         if connected?(socket) do
@@ -187,7 +191,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
   end
 
   def handle_info({[:session, :message], new_message}, socket) do
-    {:noreply, socket |> stream_insert(:messages, new_message)}
+    {:noreply, socket |> stream_insert(:messages, new_message, at: 0)}
   end
 
   def handle_info({SlippiChat.PresenceClient, {:join, %{player_code: player_code}}}, socket) do
