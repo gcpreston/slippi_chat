@@ -5,7 +5,11 @@ defmodule SlippiChatWeb.UserLoginLive do
     ~H"""
     <div class="mx-auto max-w-md">
       <.header class="text-center">
-        Sign in to account
+        SlippiChat
+
+        <:subtitle>
+          Text chat for Slippi netplay. <a href="https://github.com/gcpreston/slippi_chat" target="_blank" class="text-blue-600 hover:underline">Check it out on GitHub :)</a>
+        </:subtitle>
       </.header>
 
       <.simple_form for={@form} id="login_form" action={~p"/log_in"} phx-update="ignore">
@@ -21,12 +25,12 @@ defmodule SlippiChatWeb.UserLoginLive do
         </:actions>
       </.simple_form>
 
-      <ul class="mt-6">
+      <ul class="mt-6 text-zinc-800 ">
         <li>
           <.icon name="hero-arrow-down-circle" class="mr-2" />Download the client <a
             href="https://github.com/gcpreston/slippi-chat-client/releases"
             target="_blank"
-            class="text-blue-600 underline"
+            class="text-blue-600 hover:underline"
           >here</a>.
         </li>
         <li>
