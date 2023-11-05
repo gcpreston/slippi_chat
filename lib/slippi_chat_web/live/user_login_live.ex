@@ -6,9 +6,15 @@ defmodule SlippiChatWeb.UserLoginLive do
     <div class="mx-auto max-w-md">
       <.header class="text-center">
         SlippiChat
-
         <:subtitle>
-          Text chat for Slippi netplay. <a href="https://github.com/gcpreston/slippi_chat" target="_blank" class="text-blue-600 hover:underline">Check it out on GitHub :)</a>
+          Text chat for Slippi netplay.
+          <a
+            href="https://github.com/gcpreston/slippi_chat"
+            target="_blank"
+            class="text-blue-600 hover:underline"
+          >
+            Check it out on GitHub :)
+          </a>
         </:subtitle>
       </.header>
 
