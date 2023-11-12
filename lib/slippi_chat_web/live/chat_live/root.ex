@@ -39,12 +39,10 @@ defmodule SlippiChatWeb.ChatLive.Root do
           <.header>Players</.header>
           <ul>
             <li :for={player_code <- @chat_session_data.player_codes}>
-              <span>
-                <.status_icon
-                  class="mx-2 align-baseline"
-                  online={MapSet.member?(@online_codes, player_code)}
-                /><%= player_code %>
-              </span>
+              <.player_status
+                player_code={player_code}
+                online={MapSet.member?(@online_codes, player_code)}
+              />
             </li>
           </ul>
 
@@ -86,7 +84,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
   @impl true
   def mount(_params, _session, socket) do
     code = socket.assigns.current_user_code
-    player_code = translate_code(code)
+    player_code = SlippiChatWeb.Utils.game_player_code(code)
 
     socket =
       socket
@@ -227,10 +225,5 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
   defp player_code_is_online?(player_code) do
     Presence.get_by_key("clients", player_code) != []
-  end
-
-  defp translate_code(player_code) do
-    String.replace(player_code, "-", "#")
-    |> String.upcase()
   end
 end

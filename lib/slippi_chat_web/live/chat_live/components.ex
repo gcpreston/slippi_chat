@@ -20,9 +20,23 @@ defmodule SlippiChatWeb.ChatLive.Components do
       )
 
     ~H"""
-    <svg viewBox="0 0 15 15" height="10" class={["inline", @class]}>
+    <svg viewBox="0 0 15 15" height="10" class={["inline", @class, if(@online, do: "online")]}>
       <circle cx="50%" cy="50%" r="6" {@circle_attrs} />
     </svg>
+    """
+  end
+
+  attr :player_code, :string, required: true
+  attr :online, :boolean, default: false
+
+  def player_status(assigns) do
+    ~H"""
+    <span
+      id={"player-status-#{SlippiChatWeb.Utils.safe_player_code(@player_code)}"}
+      class={if @online, do: "online"}
+    >
+      <.status_icon class="mx-2 align-baseline" online={@online} /><%= @player_code %>
+    </span>
     """
   end
 end
