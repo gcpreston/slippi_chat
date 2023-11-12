@@ -11,7 +11,7 @@
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
   </head>
-  <body class="bg-white antialiased">
+  <body class="bg-white antialiased flex flex-col">
     <ul class="relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
       <%= if @current_user_code do %>
         <li class="text-[0.8125rem] leading-6 text-zinc-900">
@@ -37,6 +37,8 @@
         </li>
       <% end %>
     </ul>
-    <%= @inner_content %>
+    <div class="flex-1 overflow-auto">
+      <%= @inner_content %>
+    </div>
   </body>
 </html>

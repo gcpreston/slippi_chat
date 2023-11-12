@@ -16,8 +16,8 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.simple_form
+    <div class="w-full">
+      <.form
         id="message-form"
         for={@form}
         as={:message}
@@ -25,11 +25,18 @@ defmodule SlippiChatWeb.ChatLive.Message.Form do
         phx-change="update"
         phx-target={@myself}
       >
-        <.input type="text" autocomplete="off" field={@form[:content]} />
-        <:actions>
-          <.button>Send</.button>
-        </:actions>
-      </.simple_form>
+        <div class="flex flex-row">
+          <div class="flex-1">
+            <.input
+              type="text"
+              autocomplete="off"
+              field={@form[:content]}
+              placeholder="Send a message..."
+            />
+          </div>
+          <.button class="mt-2 ml-2">Send</.button>
+        </div>
+      </.form>
     </div>
     """
   end

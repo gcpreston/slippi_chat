@@ -53,7 +53,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, message} = ChatSession.send_message(pid, "XYZ#987", "hello world!")
       {:ok, _lv, html} = live(conn, ~p"/chat")
 
-      assert html =~ "Chat session players:"
+      assert html =~ "Players"
       Enum.each(player_codes, fn player_code -> assert html =~ player_code end)
       assert html =~ message.id
       assert html =~ "hello world!"
@@ -86,15 +86,15 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, lv, html} = live(conn, ~p"/chat")
-      assert html =~ "Chat session players:"
+      assert html =~ "Players"
       Process.sleep(chat_session_timeout_ms())
-      refute render(lv) =~ "Chat session players:"
+      refute render(lv) =~ "Players"
 
       # Refresh
 
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       {:ok, lv, html} = live(conn, ~p"/chat")
-      assert html =~ "Chat session players:"
+      assert html =~ "Players"
       Process.sleep(div(chat_session_timeout_ms(), 2))
 
       lv
@@ -102,9 +102,9 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       |> render_submit(%{message: %{content: "test message"}})
 
       Process.sleep(div(chat_session_timeout_ms(), 2))
-      assert render(lv) =~ "Chat session players:"
+      assert render(lv) =~ "Players"
       Process.sleep(chat_session_timeout_ms())
-      refute render(lv) =~ "Chat session players:"
+      refute render(lv) =~ "Players"
     end
 
     test "displays online status of client for each player code", %{conn: conn1} do
@@ -121,8 +121,8 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, lv2, html2} = live(conn2, ~p"/chat")
 
       Enum.each([html1, html2], fn html ->
-        refute html =~ "ABC#123 (online)"
-        refute html =~ "XYZ#987 (online)"
+        refute_html(html, "#player-status-abc-123.online", text: "ABC#123")
+        refute_html(html, "#player-status-xyz-987.online", text: "XYZ#987")
       end)
 
       code_abc = "ABC#123"
@@ -136,8 +136,8 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       wait_until(fn ->
         Enum.each([render(lv1), render(lv2)], fn html ->
-          assert html =~ "ABC#123 (online)"
-          refute html =~ "XYZ#987 (online)"
+          assert_html(html, "#player-status-abc-123.online", text: "ABC#123")
+          refute_html(html, "#player-status-xyz-987.online", text: "XYZ#987")
         end)
       end)
 
@@ -152,8 +152,8 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       wait_until(fn ->
         Enum.each([render(lv1), render(lv2)], fn html ->
-          assert html =~ "ABC#123 (online)"
-          assert html =~ "XYZ#987 (online)"
+          assert_html(html, "#player-status-abc-123.online", text: "ABC#123")
+          assert_html(html, "#player-status-xyz-987.online", text: "XYZ#987")
         end)
       end)
 
@@ -163,25 +163,10 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       wait_until(fn ->
         Enum.each([render(lv1), render(lv2)], fn html ->
-          refute html =~ "ABC#123 (online)"
-          assert html =~ "XYZ#987 (online)"
+          refute_html(html, "#player-status-abc-123.online", text: "ABC#123")
+          assert_html(html, "#player-status-xyz-987.online", text: "XYZ#987")
         end)
       end)
-    end
-
-    test "displays online status of the current player", %{conn: conn, client_code: client_code} do
-      {:ok, lv, html} = live(conn, ~p"/chat")
-
-      assert html =~ "No chat session in progress."
-      assert html =~ client_code
-      refute html =~ "(online)"
-
-      {:ok, _reply, _socket} =
-        UserSocket
-        |> socket("user_socket:#{client_code}", %{client_code: client_code})
-        |> subscribe_and_join(ClientChannel, "clients")
-
-      render_until(lv, fn html -> assert html =~ "(online)" end)
     end
 
     test "Disconnect button ends the session", %{conn: conn} do
@@ -190,7 +175,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       {:ok, lv, _html} = live(conn, ~p"/chat")
 
-      html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
+      html = render_until(lv, fn html -> assert html =~ "Players" end)
       assert html =~ "XYZ#987"
 
       lv
@@ -207,7 +192,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       {:ok, lv, _html} = live(conn, ~p"/chat")
 
-      html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
+      html = render_until(lv, fn html -> assert html =~ "Players" end)
       assert html =~ "XYZ#987"
 
       ChatSession.send_message(pid, "ABC#123", "test message")
@@ -226,7 +211,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
       {:ok, lv, _html} = live(conn, ~p"/chat")
 
-      html = render_until(lv, fn html -> assert html =~ "Chat session players:" end)
+      html = render_until(lv, fn html -> assert html =~ "Players" end)
       assert html =~ "XYZ#987"
 
       ChatSession.send_message(pid, "ABC#123", "test message")

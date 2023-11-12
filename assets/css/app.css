@@ -3,3 +3,12 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+html, body {
+  @apply h-full;
+  @apply text-zinc-800;
+}
+
+[data-phx-main] {
+  @apply h-full;
+}

@@ -31,7 +31,7 @@ defmodule SlippiChatWeb.UserLoginLive do
         </:actions>
       </.simple_form>
 
-      <ul class="mt-6 text-zinc-800 ">
+      <ul class="mt-6">
         <li>
           <.icon name="hero-arrow-down-circle" class="mr-2" />Download the client <a
             href="https://github.com/gcpreston/slippi-chat-client/releases"

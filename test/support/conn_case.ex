@@ -29,6 +29,7 @@ defmodule SlippiChatWeb.ConnCase do
       import Phoenix.ConnTest
       import SlippiChat.TimeHelper
       import SlippiChatWeb.ConnCase
+      import AssertHTML
     end
   end
 
