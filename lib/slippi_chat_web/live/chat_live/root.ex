@@ -34,8 +34,8 @@ defmodule SlippiChatWeb.ChatLive.Root do
     <%= unless @chat_session_data do %>
       <div class="italic text-center">No chat session in progress.</div>
     <% else %>
-      <div class="flex flex-row h-full">
-        <div class="w-60 border p-2">
+      <div class="flex flex-col sm:flex-row h-full">
+        <div class="sm:w-60 border p-2">
           <.header>Players</.header>
           <ul>
             <li :for={player_code <- @chat_session_data.player_codes}>
