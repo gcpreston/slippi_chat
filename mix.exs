@@ -51,7 +51,8 @@ defmodule SlippiChat.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:cors_plug, "~> 3.0"},
-      {:assert_html, "~> 0.1.3", only: :test}
+      {:assert_html, "~> 0.1.3", only: :test},
+      {:websockex, "~> 0.4.3"}
     ]
   end
 

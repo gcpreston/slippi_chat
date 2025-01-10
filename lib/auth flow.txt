@@ -1,0 +1,10 @@
+1. user enters connect code
+2. send message to slippiauth to queue for that code
+3. tell user code to connect to
+4. on success, show that it was successful and give them the token
+
+
+AuthLive --queue(code)--> AuthSocket
+       <--code_to_connect--
+....
+       <--success, failure--

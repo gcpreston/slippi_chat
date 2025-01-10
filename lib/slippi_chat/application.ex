@@ -23,7 +23,8 @@ defmodule SlippiChat.Application do
       # Start a worker by calling: SlippiChat.Worker.start_link(arg)
       # {SlippiChat.Worker, arg}
       {SlippiChat.ChatSessions.Supervisor, name: SlippiChat.ChatSessions.Supervisor},
-      {SlippiChat.Auth.MagicAuthenticator, name: SlippiChat.Auth.MagicAuthenticator}
+      {SlippiChat.Auth.MagicAuthenticator, name: SlippiChat.Auth.MagicAuthenticator},
+      {SlippiChat.SlippiAuthBridge.AuthSocket, url: "ws://0.0.0.0:9002", state: ["WebSockex is Great"], name: SlippiChat.SlippiAuthBridge.AuthSocket}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
