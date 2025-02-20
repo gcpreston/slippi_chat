@@ -192,6 +192,25 @@ defmodule SlippiChatWeb.UserAuth do
     end
   end
 
+  def on_mount(:ensure_granter_status, _params, session, socket) do
+    # TODO: Was under the impression this gives the user code, but seems the client code. Investigate
+    socket = mount_current_user(socket, session)
+
+    if Auth.has_granter_status?(socket.assigns.current_user_code) do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(
+          :error,
+          "You must have token granter status to access this page."
+        )
+        |> Phoenix.LiveView.redirect(to: signed_in_path(socket))
+
+      {:halt, socket}
+    end
+  end
+
   defp mount_current_user(socket, session) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_token = session["user_token"] do

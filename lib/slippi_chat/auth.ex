@@ -10,6 +10,12 @@ defmodule SlippiChat.Auth do
 
   alias SlippiChat.Auth.{ClientToken, TokenGranter, User}
 
+  def has_granter_status?(client_code) do
+    # TODO: Figure out how this wants to work lol
+    dbg(client_code)
+    client_code == "WAFF#715"
+  end
+
   ## Session
 
   @doc """
