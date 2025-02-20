@@ -31,6 +31,14 @@ defmodule SlippiChatWeb.Router do
       on_mount: [{SlippiChatWeb.UserAuth, :ensure_authenticated}] do
       live "/chat", ChatLive.Root, :index
     end
+
+    live_session :require_granter_user,
+      on_mount: [
+        {SlippiChatWeb.UserAuth, :ensure_authenticated},
+        {SlippiChatWeb.UserAuth, :ensure_granter_status}
+      ] do
+      live "/create_token", CreateTokenLive, :new
+    end
   end
 
   ## Authentication routes
