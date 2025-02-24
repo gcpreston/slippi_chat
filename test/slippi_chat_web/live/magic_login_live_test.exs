@@ -2,11 +2,14 @@ defmodule SlippiChatWeb.MagicLoginLiveTest do
   use SlippiChatWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import SlippiChat.AuthFixtures
+
   alias SlippiChat.Auth
 
   describe "GET /magic_log_in" do
     setup do
-      %{client_code: "ABC#123"}
+      user = user_fixture(%{connect_code: "ABC#123"})
+      %{user: user}
     end
 
     test "rejects an invalid magic token", %{conn: conn} do
@@ -14,15 +17,15 @@ defmodule SlippiChatWeb.MagicLoginLiveTest do
         live(conn, ~p"/magic_log_in?#{%{t: "fake token"}}")
     end
 
-    test "redirects if already logged in", %{conn: conn, client_code: client_code} do
-      conn = conn |> log_in_user(client_code)
+    test "redirects if already logged in", %{conn: conn, user: user} do
+      conn = conn |> log_in_user(user.connect_code)
 
       {:error, {:redirect, %{to: "/"}}} =
         live(conn, ~p"/magic_log_in?#{%{t: "doesn't matter"}}")
     end
 
-    test "enters flow with a valid magic token", %{conn: conn, client_code: client_code} do
-      magic_token = Auth.generate_magic_token(client_code)
+    test "enters flow with a valid magic token", %{conn: conn, user: user} do
+      magic_token = Auth.generate_magic_token(user.connect_code)
       {:ok, _live, html} = live(conn, ~p"/magic_log_in?#{%{t: magic_token}}")
 
       assert html =~ "Magic login"
@@ -30,11 +33,11 @@ defmodule SlippiChatWeb.MagicLoginLiveTest do
       assert html =~ ~r/\d{6}/
     end
 
-    test "submits form when event is received", %{conn: conn, client_code: client_code} do
-      magic_token = Auth.generate_magic_token(client_code)
+    test "submits form when event is received", %{conn: conn, user: user} do
+      magic_token = Auth.generate_magic_token(user.connect_code)
       {:ok, live, _html} = live(conn, ~p"/magic_log_in?#{%{t: magic_token}}")
 
-      login_token = Auth.generate_login_token(client_code)
+      login_token = Auth.generate_login_token(user.connect_code)
       send(live.pid, {:verified, %{login_token: login_token}})
 
       assert live |> element("#redirect_form") |> render() =~ login_token
@@ -49,14 +52,14 @@ defmodule SlippiChatWeb.MagicLoginLiveTest do
 
     test "only logs in the LiveView for the code being verified", %{
       conn: conn1,
-      client_code: client_code
+      user: user
     } do
-      magic_token = Auth.generate_magic_token(client_code)
+      magic_token = Auth.generate_magic_token(user.connect_code)
       conn2 = build_conn()
       {:ok, live1, _html} = live(conn1, ~p"/magic_log_in?#{%{t: magic_token}}")
       {:ok, live2, _html} = live(conn2, ~p"/magic_log_in?#{%{t: magic_token}}")
 
-      login_token = Auth.generate_login_token(client_code)
+      login_token = Auth.generate_login_token(user.connect_code)
       send(live1.pid, {:verified, %{login_token: login_token}})
 
       form1_html = live1 |> element("#redirect_form") |> render()

@@ -2,6 +2,8 @@ defmodule SlippiChatWeb.UserLoginLiveTest do
   use SlippiChatWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import SlippiChat.AuthFixtures
+
   alias SlippiChat.Auth
 
   describe "Log in page" do
@@ -12,9 +14,11 @@ defmodule SlippiChatWeb.UserLoginLiveTest do
     end
 
     test "redirects if already logged in", %{conn: conn} do
+      user = user_fixture()
+
       result =
         conn
-        |> log_in_user("ABC#123")
+        |> log_in_user(user.connect_code)
         |> live(~p"/log_in")
         |> follow_redirect(conn, "/")
 
@@ -24,7 +28,8 @@ defmodule SlippiChatWeb.UserLoginLiveTest do
 
   describe "user login" do
     test "redirects if user login with valid credentials", %{conn: conn} do
-      token = Auth.generate_admin_client_token("ABC#123")
+      user = user_fixture()
+      token = Auth.generate_admin_client_token(user.connect_code)
 
       {:ok, lv, _html} = live(conn, ~p"/log_in")
 

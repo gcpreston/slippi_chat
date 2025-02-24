@@ -1,19 +1,20 @@
 defmodule SlippiChatWeb.UserSessionControllerTest do
   use SlippiChatWeb.ConnCase, async: false
+  import SlippiChat.AuthFixtures
 
   alias SlippiChat.Auth
 
   setup do
-    client_code = "ABC#123"
-    client_token = Auth.generate_admin_client_token(client_code)
+    user = user_fixture()
+    client_token = Auth.generate_admin_client_token(user.connect_code)
 
-    %{client_code: client_code, client_token: client_token}
+    %{user: user, client_token: client_token}
   end
 
   describe "POST /log_in" do
     test "logs the user in via client token", %{
       conn: conn,
-      client_code: client_code,
+      user: user,
       client_token: client_token
     } do
       conn =
@@ -24,12 +25,12 @@ defmodule SlippiChatWeb.UserSessionControllerTest do
 
       conn = get(conn, ~p"/chat")
       response = html_response(conn, 200)
-      assert response =~ client_code
+      assert response =~ user.connect_code
       assert response =~ ~p"/log_out"
     end
 
-    test "logs the user in via login token", %{conn: conn, client_code: client_code} do
-      login_token = Auth.generate_login_token(client_code)
+    test "logs the user in via login token", %{conn: conn, user: user} do
+      login_token = Auth.generate_login_token(user.connect_code)
       conn = post(conn, ~p"/log_in", %{"login_token" => login_token})
 
       assert get_session(conn, :user_token)
@@ -37,7 +38,7 @@ defmodule SlippiChatWeb.UserSessionControllerTest do
 
       conn = get(conn, ~p"/chat")
       response = html_response(conn, 200)
-      assert response =~ client_code
+      assert response =~ user.connect_code
       assert response =~ ~p"/log_out"
     end
 
@@ -71,8 +72,8 @@ defmodule SlippiChatWeb.UserSessionControllerTest do
   end
 
   describe "DELETE /log_out" do
-    test "logs the user out", %{conn: conn, client_code: client_code} do
-      conn = conn |> log_in_user(client_code) |> delete(~p"/log_out")
+    test "logs the user out", %{conn: conn, user: user} do
+      conn = conn |> log_in_user(user.connect_code) |> delete(~p"/log_out")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Logged out successfully"
