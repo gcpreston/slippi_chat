@@ -7,9 +7,10 @@ defmodule SlippiChat.Repo.Migrations.RetroactiveUsers do
 
   def change do
     clients_query =
-      from t in SlippiChat.Auth.ClientToken,
+      from(t in SlippiChat.Auth.ClientToken,
         where: t.context == "client",
         select: t.client_code
+      )
 
     client_connect_codes = SlippiChat.Repo.all(clients_query)
 
