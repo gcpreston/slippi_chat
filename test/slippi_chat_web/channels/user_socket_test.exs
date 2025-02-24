@@ -1,5 +1,6 @@
 defmodule SlippiChatWeb.UserSocketTest do
   use SlippiChatWeb.ChannelCase, async: false
+  import SlippiChat.AuthFixtures
 
   alias SlippiChat.Auth
   alias SlippiChatWeb.UserSocket
@@ -10,11 +11,11 @@ defmodule SlippiChatWeb.UserSocketTest do
 
   describe "connect" do
     test "requires a client token", %{socket: socket} do
-      client_code = "ABC#123"
-      client_token = Auth.generate_admin_client_token(client_code)
+      user = user_fixture()
+      client_token = Auth.generate_admin_client_token(user.connect_code)
 
       assert {:ok, socket} = UserSocket.connect(%{"client_token" => client_token}, socket)
-      assert socket.assigns.client_code == client_code
+      assert socket.assigns.client_code == user.connect_code
     end
 
     test "refuses connection with no token specified", %{socket: socket} do

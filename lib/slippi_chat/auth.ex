@@ -8,7 +8,7 @@ defmodule SlippiChat.Auth do
   import Ecto.Query, warn: false
   alias SlippiChat.Repo
 
-  alias SlippiChat.Auth.{ClientToken, TokenGranter}
+  alias SlippiChat.Auth.{ClientToken, TokenGranter, User}
 
   ## Session
 
@@ -22,9 +22,9 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
-  Gets the connect code for the given signed token.
+  Gets the user for the given signed token.
   """
-  def get_client_code_by_session_token(token) do
+  def get_user_by_session_token(token) do
     {:ok, query} = ClientToken.verify_session_token_query(token)
     Repo.one(query)
   end
@@ -44,8 +44,8 @@ defmodule SlippiChat.Auth do
   """
   def generate_granted_client_token(client_code, granter_token) do
     with {:ok, query} <- ClientToken.verify_hashed_token_query(granter_token, "client"),
-         granter_code when not is_nil(granter_code) <- Repo.one(query) do
-      build_and_insert_client_token(client_code, granter_code)
+         granter when not is_nil(granter) <- Repo.one(query) do
+      build_and_insert_client_token(client_code, granter.connect_code)
     else
       _ -> :error
     end
@@ -73,12 +73,12 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
-  Gets the client_code for the given client token.
+  Gets the user for the given client token.
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_client_token(client_code) do
-    get_client_code_by_signed_token(client_code, "client")
+  def get_user_by_client_token(client_token) do
+    get_user_by_signed_token(client_token, "client")
   end
 
   @doc """
@@ -89,12 +89,12 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
-  Gets the client_code for the given magic token.
+  Gets the user for the given magic token.
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_magic_token(client_code) do
-    get_client_code_by_signed_token(client_code, "magic")
+  def get_user_by_magic_token(magic_token) do
+    get_user_by_signed_token(magic_token, "magic")
   end
 
   @doc """
@@ -105,12 +105,12 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
-  Gets the client_code for the given login token.
+  Gets the user for the given login token.
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_login_token(client_code) do
-    get_client_code_by_signed_token(client_code, "login")
+  def get_user_by_login_token(login_token) do
+    get_user_by_signed_token(login_token, "login")
   end
 
   @doc """
@@ -132,15 +132,34 @@ defmodule SlippiChat.Auth do
   end
 
   @doc """
-  Gets the client_code for the given signed token.
+  Gets the user for the given signed token.
 
   Returns `nil` if the token doesn't exist or isn't valid.
   """
-  def get_client_code_by_signed_token(token, context) do
+  def get_user_by_signed_token(token, context) do
     with {:ok, query} <- ClientToken.verify_hashed_token_query(token, context) do
       Repo.one(query)
     else
       _ -> nil
+    end
+  end
+
+  @doc """
+  Registers a user.
+
+  ## Examples
+
+    iex> register_user(%{field: value})
+    {:ok, %User{}, "some_client_token"}
+
+    iex> register_user(%{field: bad_value})
+    {:error, %Ecto.Changeset{}}
+
+  """
+  def register_user(attrs) do
+    with {:ok, user} <- %User{} |> User.registration_changeset(attrs) |> Repo.insert() do
+      token = generate_admin_client_token(user.connect_code)
+      {:ok, user, token}
     end
   end
 end

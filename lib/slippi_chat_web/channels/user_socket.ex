@@ -21,10 +21,10 @@ defmodule SlippiChatWeb.UserSocket do
   @impl true
   def connect(params, socket) do
     with token when not is_nil(token) <- params["client_token"],
-         client_code when not is_nil(client_code) <-
-           Auth.get_client_code_by_client_token(token) do
-      Logger.info("Socket connected for #{client_code}")
-      {:ok, assign(socket, :client_code, client_code)}
+         user when not is_nil(user) <-
+           Auth.get_user_by_client_token(token) do
+      Logger.info("Socket connected for #{user.connect_code}")
+      {:ok, assign(socket, :client_code, user.connect_code)}
     else
       _ -> :error
     end

@@ -10,12 +10,12 @@ defmodule SlippiChatWeb.Router do
     plug :put_root_layout, {SlippiChatWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :fetch_current_user_code
+    plug :fetch_current_user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug :fetch_current_user_code
+    plug :fetch_current_user
   end
 
   scope "/", SlippiChatWeb do

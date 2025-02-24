@@ -88,17 +88,17 @@ defmodule SlippiChatWeb.UserAuth do
   Authenticates the user by looking into the session
   and remember me token.
   """
-  def fetch_current_user_code(conn, _opts) do
+  def fetch_current_user(conn, _opts) do
     case get_format(conn) do
-      "html" -> fetch_user_code_from_session(conn)
-      "json" -> fetch_user_code_from_authorization(conn)
+      "html" -> fetch_user_from_session(conn)
+      "json" -> fetch_user_from_authorization(conn)
     end
   end
 
-  defp fetch_user_code_from_session(conn) do
+  defp fetch_user_from_session(conn) do
     {user_token, conn} = ensure_user_token(conn)
-    connect_code = user_token && Auth.get_client_code_by_session_token(user_token)
-    assign(conn, :current_user_code, connect_code)
+    user = user_token && Auth.get_user_by_session_token(user_token)
+    assign(conn, :current_user, user)
   end
 
   defp ensure_user_token(conn) do
@@ -115,13 +115,10 @@ defmodule SlippiChatWeb.UserAuth do
     end
   end
 
-  defp fetch_user_code_from_authorization(conn) do
+  defp fetch_user_from_authorization(conn) do
     client_token = get_bearer_token(conn)
-
-    connect_code =
-      if client_token, do: Auth.get_client_code_by_client_token(client_token), else: nil
-
-    assign(conn, :current_user_code, connect_code)
+    maybe_user = client_token && Auth.get_user_by_client_token(client_token)
+    assign(conn, :current_user, maybe_user)
   end
 
   defp get_bearer_token(conn) do
@@ -173,7 +170,7 @@ defmodule SlippiChatWeb.UserAuth do
   def on_mount(:ensure_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
-    if socket.assigns.current_user_code do
+    if socket.assigns.current_user do
       {:cont, socket}
     else
       socket =
@@ -188,7 +185,7 @@ defmodule SlippiChatWeb.UserAuth do
   def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
-    if socket.assigns.current_user_code do
+    if socket.assigns.current_user do
       {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
     else
       {:cont, socket}
@@ -196,9 +193,9 @@ defmodule SlippiChatWeb.UserAuth do
   end
 
   defp mount_current_user(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_user_code, fn ->
+    Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_token = session["user_token"] do
-        Auth.get_client_code_by_session_token(user_token)
+        Auth.get_user_by_session_token(user_token)
       end
     end)
   end
@@ -207,7 +204,7 @@ defmodule SlippiChatWeb.UserAuth do
   Used for routes that require the user to not be authenticated.
   """
   def redirect_if_user_is_authenticated(conn, _opts) do
-    if conn.assigns[:current_user_code] do
+    if conn.assigns[:current_user] do
       conn
       |> redirect(to: signed_in_path(conn))
       |> halt()
@@ -223,7 +220,7 @@ defmodule SlippiChatWeb.UserAuth do
   they use the application at all, here would be a good place.
   """
   def require_authenticated_user(conn, _opts) do
-    if conn.assigns[:current_user_code] do
+    if conn.assigns[:current_user] do
       conn
     else
       case get_format(conn) do

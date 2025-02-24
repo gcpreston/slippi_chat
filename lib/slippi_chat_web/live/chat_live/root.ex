@@ -83,7 +83,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
 
   @impl true
   def mount(_params, _session, socket) do
-    code = socket.assigns.current_user_code
+    code = socket.assigns.current_user.connect_code
     player_code = SlippiChatWeb.Utils.game_player_code(code)
 
     socket =

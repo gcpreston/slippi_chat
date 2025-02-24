@@ -3,6 +3,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
 
   import Phoenix.LiveViewTest
   import Phoenix.ChannelTest
+  import SlippiChat.AuthFixtures
 
   alias SlippiChatWeb.Endpoint
   alias SlippiChat.ChatSessionRegistry
@@ -18,8 +19,8 @@ defmodule SlippiChatWeb.GameLive.RootTest do
   end
 
   defp authenticate(%{conn: conn}) do
-    client_code = "ABC#123"
-    %{conn: log_in_user(conn, client_code), client_code: client_code}
+    user = user_fixture(%{connect_code: "ABC#123"})
+    %{conn: log_in_user(conn, user.connect_code), client_code: user.connect_code}
   end
 
   describe "Mount" do
@@ -67,6 +68,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       player_codes = ["ABC#123", "XYZ#987"]
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
 
+      _user2 = user_fixture(%{connect_code: "XYZ#987"})
       conn2 = Phoenix.ConnTest.build_conn() |> log_in_user("XYZ#987")
       {:ok, lv1, _html1} = live(conn1, ~p"/chat")
       {:ok, lv2, _html2} = live(conn2, ~p"/chat")
@@ -116,6 +118,7 @@ defmodule SlippiChatWeb.GameLive.RootTest do
       {:ok, _pid} = ChatSessionRegistry.start_chat_session(chat_session_registry(), player_codes)
       Endpoint.subscribe("clients")
 
+      _user2 = user_fixture(%{connect_code: "XYZ#987"})
       conn2 = Phoenix.ConnTest.build_conn() |> log_in_user("XYZ#987")
       {:ok, lv1, html1} = live(conn1, ~p"/chat")
       {:ok, lv2, html2} = live(conn2, ~p"/chat")
