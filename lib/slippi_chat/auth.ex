@@ -44,8 +44,8 @@ defmodule SlippiChat.Auth do
   """
   def generate_granted_client_token(client_code, granter_token) do
     with {:ok, query} <- ClientToken.verify_hashed_token_query(granter_token, "client"),
-         granter_code when not is_nil(granter_code) <- Repo.one(query) do
-      build_and_insert_client_token(client_code, granter_code)
+         granter when not is_nil(granter) <- Repo.one(query) do
+      build_and_insert_client_token(client_code, granter.connect_code)
     else
       _ -> :error
     end

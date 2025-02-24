@@ -1,5 +1,6 @@
 defmodule SlippiChatWeb.MagicLoginControllerTest do
   use SlippiChatWeb.ConnCase, async: false
+  import SlippiChat.AuthFixtures
 
   alias SlippiChat.Auth
   alias SlippiChat.Auth.MagicAuthenticator
@@ -9,13 +10,13 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
   end
 
   setup do
-    client_code = "ABC#123"
-    client_token = Auth.generate_admin_client_token(client_code)
+    user = user_fixture()
+    client_token = Auth.generate_admin_client_token(user.connect_code)
 
     allow = Process.whereis(magic_authenticator())
     Ecto.Adapters.SQL.Sandbox.allow(SlippiChat.Repo, self(), allow)
 
-    %{client_code: client_code, client_token: client_token}
+    %{user: user, client_token: client_token}
   end
 
   describe "POST /magic_generate" do
@@ -28,7 +29,7 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
     test "generates a magic token", %{
       conn: conn,
       client_token: client_token,
-      client_code: client_code
+      user: user
     } do
       conn =
         conn
@@ -38,14 +39,14 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
       response = json_response(conn, 200)
 
       assert %{"data" => %{"magic_token" => magic_token}} = response
-      assert Auth.get_client_code_by_magic_token(magic_token) == client_code
+      assert Auth.get_user_by_magic_token(magic_token) == user
     end
   end
 
   describe "POST /magic_verify" do
-    test "requires authorization", %{conn: conn, client_code: client_code} do
+    test "requires authorization", %{conn: conn, user: user} do
       verification_code =
-        MagicAuthenticator.register_verification_code(magic_authenticator(), client_code)
+        MagicAuthenticator.register_verification_code(magic_authenticator(), user.connect_code)
 
       conn = post(conn, ~p"/magic_verify", %{"verification_code" => verification_code})
 
@@ -65,13 +66,14 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
 
     test "does not authorize with a different user's client token", %{
       conn: conn,
-      client_code: client_code
+      user: user
     } do
-      SlippiChatWeb.Endpoint.subscribe("magic_login:#{client_code}")
-      diff_client_token = Auth.generate_admin_client_token("XYZ#987")
+      SlippiChatWeb.Endpoint.subscribe("magic_login:#{user.connect_code}")
+      diff_user = user_fixture()
+      diff_client_token = Auth.generate_admin_client_token(diff_user.connect_code)
 
       verification_code =
-        MagicAuthenticator.register_verification_code(magic_authenticator(), client_code)
+        MagicAuthenticator.register_verification_code(magic_authenticator(), user.connect_code)
 
       conn =
         conn
@@ -84,13 +86,13 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
 
     test "sends a login token via pubsub on successful verification", %{
       conn: conn,
-      client_code: client_code,
+      user: user,
       client_token: client_token
     } do
-      SlippiChatWeb.Endpoint.subscribe("magic_login:#{client_code}")
+      SlippiChatWeb.Endpoint.subscribe("magic_login:#{user.connect_code}")
 
       verification_code =
-        MagicAuthenticator.register_verification_code(magic_authenticator(), client_code)
+        MagicAuthenticator.register_verification_code(magic_authenticator(), user.connect_code)
 
       conn =
         conn
@@ -99,7 +101,7 @@ defmodule SlippiChatWeb.MagicLoginControllerTest do
 
       assert json_response(conn, 200) == "OK"
       assert_receive {:verified, %{login_token: login_token}}
-      assert Auth.get_client_code_by_login_token(login_token) == client_code
+      assert Auth.get_user_by_login_token(login_token) == user
     end
   end
 end

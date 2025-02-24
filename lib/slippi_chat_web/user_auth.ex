@@ -117,7 +117,7 @@ defmodule SlippiChatWeb.UserAuth do
 
   defp fetch_user_from_authorization(conn) do
     client_token = get_bearer_token(conn)
-    maybe_user = Auth.get_user_by_client_token(client_token)
+    maybe_user = client_token && Auth.get_user_by_client_token(client_token)
     assign(conn, :current_user, maybe_user)
   end
 
