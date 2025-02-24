@@ -2,7 +2,8 @@ defmodule SlippiChat.AuthTest do
   use SlippiChat.DataCase, async: true
 
   alias SlippiChat.Auth
-  alias SlippiChat.Auth.{ClientToken, TokenGranter}
+  alias SlippiChat.Auth.{ClientToken, TokenGranter, User}
+  alias SlippiChat.Repo
 
   describe "generate_user_session_token/1" do
     setup do
@@ -105,6 +106,46 @@ defmodule SlippiChat.AuthTest do
                Base.url_encode64(":)", padding: false),
                "client"
              ) == nil
+    end
+  end
+
+  describe "register_user/1" do
+    test "registers a non-admin user" do
+      connect_code = "ABC#123"
+      assert {:ok, user} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
+
+      fetched_user = Repo.get(User, user.id)
+      assert fetched_user.connect_code == connect_code
+      assert fetched_user.is_admin == false
+    end
+
+    test "registers an admin user" do
+      connect_code = "ABC#123"
+      assert {:ok, user} = Auth.register_user(%{connect_code: connect_code, is_admin: true})
+
+      fetched_user = Repo.get(User, user.id)
+      assert fetched_user.connect_code == connect_code
+      assert fetched_user.is_admin == true
+    end
+
+    test "ensures connect code is required" do
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: nil, is_admin: true})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: "", is_admin: true})
+    end
+
+    test "ensures unique connect codes" do
+      connect_code = "ABC#123"
+      assert {:ok, _user} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: connect_code, is_admin: true})
+    end
+
+    test "ensures connect code format" do
+      assert {:ok, _user} = Auth.register_user(%{connect_code: "LONGCODE#1234567", is_admin: false})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: "LONGCODE#12345678", is_admin: false})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: "NOPOUND123", is_admin: false})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: "lowerCASE#123", is_admin: false})
+      assert {:error, _changeset} = Auth.register_user(%{connect_code: "NONUMS#", is_admin: false})
+      assert {:ok, _user} = Auth.register_user(%{connect_code: "COOLCODE#0", is_admin: false})
     end
   end
 end

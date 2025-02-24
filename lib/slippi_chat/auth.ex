@@ -8,7 +8,7 @@ defmodule SlippiChat.Auth do
   import Ecto.Query, warn: false
   alias SlippiChat.Repo
 
-  alias SlippiChat.Auth.{ClientToken, TokenGranter}
+  alias SlippiChat.Auth.{ClientToken, TokenGranter, User}
 
   ## Session
 
@@ -142,5 +142,23 @@ defmodule SlippiChat.Auth do
     else
       _ -> nil
     end
+  end
+
+  @doc """
+  Registers a user.
+
+  ## Examples
+
+    iex> register_user(%{field: value})
+    {:ok, %User{}}
+
+    iex> register_user(%{field: bad_value})
+    {:error, %Ecto.Changeset{}}
+
+  """
+  def register_user(attrs) do
+    %User{}
+    |> User.registration_changeset(attrs)
+    |> Repo.insert()
   end
 end
