@@ -17,14 +17,14 @@ defmodule SlippiChatWeb.UserSessionController do
   end
 
   defp create(conn, %{"token" => token} = params, context, info) do
-    if client_code = Auth.get_client_code_by_signed_token(token, context) do
+    if user = Auth.get_user_by_signed_token(token, context) do
       if context == "login" do
-        Auth.delete_login_tokens(client_code)
+        Auth.delete_login_tokens(user.connect_code)
       end
 
       conn
       |> put_flash(:info, info)
-      |> UserAuth.log_in_user(client_code, params)
+      |> UserAuth.log_in_user(user.connect_code, params)
     else
       conn
       |> put_flash(:error, "Invalid token")

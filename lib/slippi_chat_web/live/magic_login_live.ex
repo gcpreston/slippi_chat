@@ -43,7 +43,7 @@ defmodule SlippiChatWeb.MagicLoginLive do
 
   @impl true
   def mount(%{"t" => magic_token}, _session, socket) do
-    if client_code = Auth.get_client_code_by_magic_token(magic_token) do
+    if client_code = Auth.get_user_by_magic_token(magic_token) do
       verification_code =
         if connected?(socket) do
           MagicAuthenticator.register_verification_code(magic_authenticator(), client_code)

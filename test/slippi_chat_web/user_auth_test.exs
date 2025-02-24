@@ -5,6 +5,8 @@ defmodule SlippiChatWeb.UserAuthTest do
   alias SlippiChat.Auth
   alias SlippiChatWeb.UserAuth
 
+  import SlippiChat.AuthFixtures
+
   @remember_me_cookie "_slippi_chat_web_user_remember_me"
 
   setup %{conn: conn} do
@@ -13,7 +15,9 @@ defmodule SlippiChatWeb.UserAuthTest do
       |> Map.replace!(:secret_key_base, SlippiChatWeb.Endpoint.config(:secret_key_base))
       |> init_test_session(%{})
 
-    %{client_code: "ABC#123", conn: conn}
+    user = user_fixture(%{connect_code: "ABC#123"})
+
+    %{client_code: user.connect_code, user: user, conn: conn}
   end
 
   describe "log_in_user/3" do
@@ -22,7 +26,7 @@ defmodule SlippiChatWeb.UserAuthTest do
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
       assert redirected_to(conn) == ~p"/"
-      assert Auth.get_client_code_by_session_token(token)
+      assert Auth.get_user_by_session_token(token)
     end
 
     test "clears everything previously stored in the session", %{
@@ -65,7 +69,7 @@ defmodule SlippiChatWeb.UserAuthTest do
       refute conn.cookies[@remember_me_cookie]
       assert %{max_age: 0} = conn.resp_cookies[@remember_me_cookie]
       assert redirected_to(conn) == ~p"/"
-      refute Auth.get_client_code_by_session_token(user_token)
+      refute Auth.get_user_by_session_token(user_token)
     end
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do
@@ -87,32 +91,32 @@ defmodule SlippiChatWeb.UserAuthTest do
     end
   end
 
-  describe "fetch_current_user_code/2" do
+  describe "fetch_current_user/2" do
     setup %{conn: conn} do
       %{conn: Phoenix.Controller.put_format(conn, "html")}
     end
 
-    test "authenticates user from session", %{conn: conn, client_code: client_code} do
-      user_token = Auth.generate_user_session_token(client_code)
-      conn = conn |> put_session(:user_token, user_token) |> UserAuth.fetch_current_user_code([])
-      assert conn.assigns.current_user_code == client_code
+    test "authenticates user from session", %{conn: conn, user: user} do
+      user_token = Auth.generate_user_session_token(user.connect_code)
+      conn = conn |> put_session(:user_token, user_token) |> UserAuth.fetch_current_user([])
+      assert conn.assigns.current_user == user
     end
 
-    test "authenticates user from bearer token", %{conn: conn, client_code: client_code} do
-      client_token = Auth.generate_admin_client_token(client_code)
+    test "authenticates user from bearer token", %{conn: conn, user: user} do
+      client_token = Auth.generate_admin_client_token(user.connect_code)
 
       conn =
         conn
         |> Phoenix.Controller.put_format("json")
         |> put_req_header("authorization", "Bearer #{client_token}")
-        |> UserAuth.fetch_current_user_code(conn)
+        |> UserAuth.fetch_current_user(conn)
 
-      assert conn.assigns.current_user_code == client_code
+      assert conn.assigns.current_user == user
     end
 
-    test "authenticates user from cookies", %{conn: conn, client_code: client_code} do
+    test "authenticates user from cookies", %{conn: conn, user: user} do
       logged_in_conn =
-        conn |> fetch_cookies() |> UserAuth.log_in_user(client_code, %{"remember_me" => "true"})
+        conn |> fetch_cookies() |> UserAuth.log_in_user(user.connect_code, %{"remember_me" => "true"})
 
       user_token = logged_in_conn.cookies[@remember_me_cookie]
       %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
@@ -120,35 +124,35 @@ defmodule SlippiChatWeb.UserAuthTest do
       conn =
         conn
         |> put_req_cookie(@remember_me_cookie, signed_token)
-        |> UserAuth.fetch_current_user_code([])
+        |> UserAuth.fetch_current_user([])
 
-      assert conn.assigns.current_user_code == client_code
+      assert conn.assigns.current_user == user
       assert get_session(conn, :user_token) == user_token
 
       assert get_session(conn, :live_socket_id) ==
                "users_sessions:#{Base.url_encode64(user_token)}"
     end
 
-    test "does not authenticate if data is missing", %{conn: conn, client_code: client_code} do
-      _ = Auth.generate_user_session_token(client_code)
-      conn = UserAuth.fetch_current_user_code(conn, [])
+    test "does not authenticate if data is missing", %{conn: conn, user: user} do
+      _ = Auth.generate_user_session_token(user.connect_code)
+      conn = UserAuth.fetch_current_user(conn, [])
       refute get_session(conn, :user_token)
-      refute conn.assigns.current_user_code
+      refute conn.assigns.current_user
     end
   end
 
   describe "on_mount: mount_current_user" do
     test "assigns current_user based on a valid user_token", %{
       conn: conn,
-      client_code: client_code
+      user: user
     } do
-      user_token = Auth.generate_user_session_token(client_code)
+      user_token = Auth.generate_user_session_token(user.connect_code)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       {:cont, updated_socket} =
         UserAuth.on_mount(:mount_current_user, %{}, session, %LiveView.Socket{})
 
-      assert updated_socket.assigns.current_user_code == client_code
+      assert updated_socket.assigns.current_user == user
     end
 
     test "assigns nil to current_user assign if there isn't a valid user_token", %{conn: conn} do
@@ -158,7 +162,7 @@ defmodule SlippiChatWeb.UserAuthTest do
       {:cont, updated_socket} =
         UserAuth.on_mount(:mount_current_user, %{}, session, %LiveView.Socket{})
 
-      assert updated_socket.assigns.current_user_code == nil
+      assert updated_socket.assigns.current_user == nil
     end
 
     test "assigns nil to current_user assign if there isn't a user_token", %{conn: conn} do
@@ -167,22 +171,22 @@ defmodule SlippiChatWeb.UserAuthTest do
       {:cont, updated_socket} =
         UserAuth.on_mount(:mount_current_user, %{}, session, %LiveView.Socket{})
 
-      assert updated_socket.assigns.current_user_code == nil
+      assert updated_socket.assigns.current_user == nil
     end
   end
 
   describe "on_mount: ensure_authenticated" do
     test "authenticates current_user based on a valid user_token", %{
       conn: conn,
-      client_code: client_code
+      user: user
     } do
-      user_token = Auth.generate_user_session_token(client_code)
+      user_token = Auth.generate_user_session_token(user.connect_code)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       {:cont, updated_socket} =
         UserAuth.on_mount(:ensure_authenticated, %{}, session, %LiveView.Socket{})
 
-      assert updated_socket.assigns.current_user_code == client_code
+      assert updated_socket.assigns.current_user == user
     end
 
     test "redirects to login page if there isn't a valid user_token", %{conn: conn} do
@@ -195,7 +199,7 @@ defmodule SlippiChatWeb.UserAuthTest do
       }
 
       {:halt, updated_socket} = UserAuth.on_mount(:ensure_authenticated, %{}, session, socket)
-      assert updated_socket.assigns.current_user_code == nil
+      assert updated_socket.assigns.current_user == nil
     end
 
     test "redirects to login page if there isn't a user_token", %{conn: conn} do
@@ -207,7 +211,7 @@ defmodule SlippiChatWeb.UserAuthTest do
       }
 
       {:halt, updated_socket} = UserAuth.on_mount(:ensure_authenticated, %{}, session, socket)
-      assert updated_socket.assigns.current_user_code == nil
+      assert updated_socket.assigns.current_user == nil
     end
   end
 
@@ -242,7 +246,7 @@ defmodule SlippiChatWeb.UserAuthTest do
     test "redirects if user is authenticated", %{conn: conn, client_code: client_code} do
       conn =
         conn
-        |> assign(:current_user_code, client_code)
+        |> assign(:current_user, client_code)
         |> UserAuth.redirect_if_user_is_authenticated([])
 
       assert conn.halted
@@ -304,9 +308,9 @@ defmodule SlippiChatWeb.UserAuthTest do
       refute get_session(halted_conn, :user_return_to)
     end
 
-    test "does not redirect if user is authenticated", %{conn: conn, client_code: client_code} do
+    test "does not redirect if user is authenticated", %{conn: conn, user: user} do
       conn =
-        conn |> assign(:current_user_code, client_code) |> UserAuth.require_authenticated_user([])
+        conn |> assign(:current_user, user) |> UserAuth.require_authenticated_user([])
 
       refute conn.halted
       refute conn.status

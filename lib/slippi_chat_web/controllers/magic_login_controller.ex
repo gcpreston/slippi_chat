@@ -9,14 +9,14 @@ defmodule SlippiChatWeb.MagicLoginController do
   end
 
   def generate(conn, _params) do
-    client_code = conn.assigns[:current_user_code]
+    client_code = conn.assigns[:current_user].connect_code
     magic_token = Auth.generate_magic_token(client_code)
 
     render(conn, :show, magic_token: magic_token)
   end
 
   def verify(conn, %{"verification_code" => verification_code}) do
-    client_code = conn.assigns[:current_user_code]
+    client_code = conn.assigns[:current_user].connect_code
 
     if MagicAuthenticator.verify(magic_authenticator(), client_code, verification_code) do
       conn

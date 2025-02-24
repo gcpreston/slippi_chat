@@ -1,6 +1,7 @@
 defmodule SlippiChat.Auth.ClientToken do
   use Ecto.Schema
   import Ecto.Query
+  alias SlippiChat.Auth.User
 
   @hash_algorithm :sha256
   @rand_size 32
@@ -52,8 +53,10 @@ defmodule SlippiChat.Auth.ClientToken do
   def verify_session_token_query(token) do
     query =
       from token in token_and_context_query(token, "session"),
+        join: user in User,
+        on: [connect_code: token.client_code],
         where: token.inserted_at > ago(@session_validity_in_days, "day"),
-        select: token.client_code
+        select: user
 
     {:ok, query}
   end
@@ -95,7 +98,9 @@ defmodule SlippiChat.Auth.ClientToken do
         query =
           from token in token_and_context_query(hashed_token, context),
             # where: token.inserted_at > ago(^days, "day") and token.sent_to == user.email,
-            select: token.client_code
+            join: user in User,
+            on: [connect_code: token.client_code],
+            select: user
 
         {:ok, query}
 
