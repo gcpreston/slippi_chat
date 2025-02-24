@@ -150,15 +150,16 @@ defmodule SlippiChat.Auth do
   ## Examples
 
     iex> register_user(%{field: value})
-    {:ok, %User{}}
+    {:ok, %User{}, "some_client_token"}
 
     iex> register_user(%{field: bad_value})
     {:error, %Ecto.Changeset{}}
 
   """
   def register_user(attrs) do
-    %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    with {:ok, user} <- %User{} |> User.registration_changeset(attrs) |> Repo.insert() do
+      token = generate_admin_client_token(user.connect_code)
+      {:ok, user, token}
+    end
   end
 end

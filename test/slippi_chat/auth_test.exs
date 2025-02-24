@@ -112,40 +112,53 @@ defmodule SlippiChat.AuthTest do
   describe "register_user/1" do
     test "registers a non-admin user" do
       connect_code = "ABC#123"
-      assert {:ok, user} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
+      assert {:ok, user, token} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
 
       fetched_user = Repo.get(User, user.id)
       assert fetched_user.connect_code == connect_code
       assert fetched_user.is_admin == false
+
+      {:ok, token} = Base.url_decode64(token, padding: false)
+      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
+      assert client_token.context == "client"
+      assert client_token.client_code == connect_code
     end
 
     test "registers an admin user" do
       connect_code = "ABC#123"
-      assert {:ok, user} = Auth.register_user(%{connect_code: connect_code, is_admin: true})
+      assert {:ok, user, token} = Auth.register_user(%{connect_code: connect_code, is_admin: true})
 
       fetched_user = Repo.get(User, user.id)
       assert fetched_user.connect_code == connect_code
       assert fetched_user.is_admin == true
+
+      {:ok, token} = Base.url_decode64(token, padding: false)
+      assert client_token = Repo.get_by(ClientToken, token: :crypto.hash(:sha256, token))
+      assert client_token.context == "client"
+      assert client_token.client_code == connect_code
     end
 
     test "ensures connect code is required" do
+      token_count_before = Repo.aggregate(ClientToken, :count, :id)
       assert {:error, _changeset} = Auth.register_user(%{connect_code: nil, is_admin: true})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: "", is_admin: true})
+      token_count_after = Repo.aggregate(ClientToken, :count, :id)
+      assert token_count_before == token_count_after
     end
 
     test "ensures unique connect codes" do
       connect_code = "ABC#123"
-      assert {:ok, _user} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
+      assert {:ok, _user, _token} = Auth.register_user(%{connect_code: connect_code, is_admin: false})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: connect_code, is_admin: true})
     end
 
     test "ensures connect code format" do
-      assert {:ok, _user} = Auth.register_user(%{connect_code: "LONGCODE#1234567", is_admin: false})
+      assert {:ok, _user, _token} = Auth.register_user(%{connect_code: "LONGCODE#1234567", is_admin: false})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: "LONGCODE#12345678", is_admin: false})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: "NOPOUND123", is_admin: false})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: "lowerCASE#123", is_admin: false})
       assert {:error, _changeset} = Auth.register_user(%{connect_code: "NONUMS#", is_admin: false})
-      assert {:ok, _user} = Auth.register_user(%{connect_code: "COOLCODE#0", is_admin: false})
+      assert {:ok, _user, _token} = Auth.register_user(%{connect_code: "COOLCODE#0", is_admin: false})
     end
   end
 end
