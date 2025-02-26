@@ -13,7 +13,7 @@ defmodule SlippiChat.AuthFixtures do
     "#{letters}##{number}"
   end
 
-  defp unique_connect_code do
+  def unique_connect_code do
     generated_connect_code = random_connect_code()
 
     if Repo.exists?(from u in User, where: u.connect_code == ^generated_connect_code) do

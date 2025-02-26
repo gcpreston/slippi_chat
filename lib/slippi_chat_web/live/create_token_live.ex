@@ -1,6 +1,8 @@
 defmodule SlippiChatWeb.CreateTokenLive do
   use SlippiChatWeb, :live_view
 
+  alias SlippiChat.Auth
+
   def render(assigns) do
     ~H"""
     <div class="mx-auto max-w-md">
@@ -22,8 +24,10 @@ defmodule SlippiChatWeb.CreateTokenLive do
             onclick="copyToClipboard()"
             class="mt-2 display-block"
             phx-click={JS.remove_class("hidden", to: "#check")}
-          >Copy</.button>
-          <span id="check" class="hidden"><.icon id="check" name="hero-check-solid" /></span>
+          >
+            Copy
+          </.button>
+          <span id="check" class="hidden"><.icon name="hero-check-solid" /></span>
         </span>
       </div>
 
@@ -38,17 +42,18 @@ defmodule SlippiChatWeb.CreateTokenLive do
   end
 
   def handle_event("create", %{"grantee" => grantee}, socket) do
-    granted_token = "test_token" # Auth.generate_admin_client_token(grantee)
+    {:ok, _new_user, new_token} =
+      Auth.register_user(%{connect_code: grantee, is_admin: false})
 
-    {:noreply, socket |> assign(new_token: granted_token)}
+    {:noreply, socket |> assign(new_token: new_token)}
   end
 
   def mount(_params, _session, socket) do
     form = to_form(%{"grantee" => nil})
+
     {:ok,
-      socket
-      |> assign(form: form)
-      |> assign(new_token: nil),
-      temporary_assigns: [form: form]}
+     socket
+     |> assign(form: form)
+     |> assign(new_token: nil), temporary_assigns: [form: form]}
   end
 end

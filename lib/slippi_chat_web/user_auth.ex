@@ -193,10 +193,9 @@ defmodule SlippiChatWeb.UserAuth do
   end
 
   def on_mount(:ensure_granter_status, _params, session, socket) do
-    # TODO: Was under the impression this gives the user code, but seems the client code. Investigate
     socket = mount_current_user(socket, session)
 
-    if Auth.has_granter_status?(socket.assigns.current_user_code) do
+    if Auth.has_granter_status?(socket.assigns.current_user) do
       {:cont, socket}
     else
       socket =
