@@ -20,7 +20,7 @@ defmodule SlippiChatWeb.MagicLoginLive do
       <div class="text-center mt-12">
         <div>Your magic code is</div>
         <div class="mt-6 text-6xl">
-          <%= @verification_code %>
+          {@verification_code}
         </div>
       </div>
 

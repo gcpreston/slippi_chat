@@ -63,7 +63,7 @@ defmodule SlippiChatWeb.ChatLive.Root do
           <div class="flex-1 flex flex-col-reverse overflow-auto">
             <ul id="chat-log" phx-update="stream" class="divide-y">
               <li :for={{dom_id, message} <- @streams.messages} id={dom_id} class="chat-message px-1">
-                <span class="font-semibold"><%= message.sender %>:</span> <%= message.content %>
+                <span class="font-semibold">{message.sender}:</span> {message.content}
               </li>
             </ul>
           </div>
