@@ -10,6 +10,11 @@ defmodule SlippiChat.Auth do
 
   alias SlippiChat.Auth.{ClientToken, TokenGranter, User}
 
+  @doc """
+  Determines if a user has the priviledge to grant new client tokens.
+  """
+  def has_granter_status?(%User{is_admin: is_admin}), do: is_admin
+
   ## Session
 
   @doc """
