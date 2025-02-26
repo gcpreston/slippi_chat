@@ -35,7 +35,7 @@ defmodule SlippiChatWeb.ChatLive.Components do
       id={"player-status-#{SlippiChatWeb.Utils.safe_player_code(@player_code)}"}
       class={if @online, do: "online"}
     >
-      <.status_icon class="mx-2 align-baseline" online={@online} /><%= @player_code %>
+      <.status_icon class="mx-2 align-baseline" online={@online} />{@player_code}
     </span>
     """
   end

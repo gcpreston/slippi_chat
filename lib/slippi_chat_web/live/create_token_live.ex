@@ -18,7 +18,7 @@ defmodule SlippiChatWeb.CreateTokenLive do
 
       <div :if={@new_token} class="mt-4 text-center">
         <div class="text-zinc-600">New token created, copy it now, you won't be able to again:</div>
-        <div id="new-token"><%= @new_token %></div>
+        <div id="new-token">{@new_token}</div>
         <span>
           <.button
             onclick="copyToClipboard()"
