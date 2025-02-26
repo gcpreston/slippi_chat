@@ -11,7 +11,7 @@ defmodule SlippiChatWeb.CreateTokenLive do
 
         <:actions>
           <.button phx-disable-with="Creating..." class="w-full">
-            Create
+            Create token
           </.button>
         </:actions>
       </.simple_form>
@@ -42,10 +42,16 @@ defmodule SlippiChatWeb.CreateTokenLive do
   end
 
   def handle_event("create", %{"grantee" => grantee}, socket) do
-    {:ok, _new_user, new_token} =
-      Auth.register_user(%{connect_code: grantee, is_admin: false})
+    socket =
+      case Auth.register_user(%{connect_code: grantee, is_admin: false}) do
+        {:ok, _new_user, new_token} ->
+          assign(socket, new_token: new_token)
 
-    {:noreply, socket |> assign(new_token: new_token)}
+        {:error, _} ->
+          put_flash(socket, :error, "Failed to create token, does this user already exist?")
+      end
+
+    {:noreply, socket}
   end
 
   def mount(_params, _session, socket) do
