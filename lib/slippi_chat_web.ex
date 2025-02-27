@@ -43,7 +43,7 @@ defmodule SlippiChatWeb do
         layouts: [html: SlippiChatWeb.Layouts]
 
       import Plug.Conn
-      import SlippiChatWeb.Gettext
+      use Gettext, backend: SlippiChatWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -85,7 +85,7 @@ defmodule SlippiChatWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import SlippiChatWeb.CoreComponents
-      import SlippiChatWeb.Gettext
+      use Gettext, backend: SlippiChatWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
