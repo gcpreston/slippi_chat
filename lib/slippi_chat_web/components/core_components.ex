@@ -17,7 +17,7 @@ defmodule SlippiChatWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import SlippiChatWeb.Gettext
+  use Gettext, backend: SlippiChatWeb.Gettext
 
   @doc """
   Renders a modal.

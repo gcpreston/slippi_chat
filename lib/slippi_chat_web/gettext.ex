@@ -5,7 +5,7 @@ defmodule SlippiChatWeb.Gettext do
   By using [Gettext](https://hexdocs.pm/gettext),
   your module gains a set of macros for translations, for example:
 
-      import SlippiChatWeb.Gettext
+      use Gettext, backend: SlippiChatWeb.Gettext
 
       # Simple translation
       gettext("Here is the string to translate")
@@ -20,5 +20,5 @@ defmodule SlippiChatWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :slippi_chat
+  use Gettext.Backend, otp_app: :slippi_chat
 end
